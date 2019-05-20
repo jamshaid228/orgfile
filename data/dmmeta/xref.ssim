@@ -418,6 +418,10 @@ dmmeta.xref  field:lib_json.FNode.c_child  inscond:"row.p_parent != &row"  via:l
 dmmeta.xref  field:lib_sql.FDb.ind_attr  inscond:true  via:""
 dmmeta.xref  field:mdbg.FDb.ind_cfg  inscond:true  via:""
 dmmeta.xref  field:mdbg.FCfg.c_builddir  inscond:true  via:mdbg.FDb.ind_cfg/dev.Builddir.cfg
+dmmeta.xref  field:orgfile.FDb.ind_filename  inscond:true  via:""
+dmmeta.xref  field:orgfile.FDb.ind_filehash  inscond:true  via:""
+dmmeta.xref  field:orgfile.FFilehash.c_filename  inscond:true  via:orgfile.FDb.ind_filehash/orgfile.FFilename.filehash
+dmmeta.xref  field:orgfile.FFilename.p_filehash  inscond:true  via:orgfile.FDb.ind_filehash/orgfile.FFilename.filehash
 dmmeta.xref  field:src_func.FDb.ind_target  inscond:true  via:""
 dmmeta.xref  field:src_func.FTarget.cd_targsrc  inscond:true  via:src_func.FDb.ind_target/dev.Targsrc.target
 dmmeta.xref  field:src_func.FDb.bh_func  inscond:true  via:""

@@ -152,37 +152,41 @@ enum command_FieldIdEnum {                    // command.FieldId.value
     ,command_FieldId_tables            = 135
     ,command_FieldId_nologo            = 136
     ,command_FieldId_baddbok           = 137
-    ,command_FieldId_targsrc           = 138
-    ,command_FieldId_name              = 139
-    ,command_FieldId_body              = 140
-    ,command_FieldId_func              = 141
-    ,command_FieldId_nextfile          = 142
-    ,command_FieldId_other             = 143
-    ,command_FieldId_updateproto       = 144
-    ,command_FieldId_listfunc          = 145
-    ,command_FieldId_iffy              = 146
-    ,command_FieldId_gen               = 147
-    ,command_FieldId_showloc           = 148
-    ,command_FieldId_showstatic        = 149
-    ,command_FieldId_showsortkey       = 150
-    ,command_FieldId_sortname          = 151
-    ,command_FieldId_update_authors    = 152
-    ,command_FieldId_indent            = 153
-    ,command_FieldId_linelim           = 154
-    ,command_FieldId_strayfile         = 155
-    ,command_FieldId_capture           = 156
-    ,command_FieldId_expand            = 157
-    ,command_FieldId_ignoreQuote       = 158
-    ,command_FieldId_maxpacket         = 159
-    ,command_FieldId_db                = 160
-    ,command_FieldId_createdb          = 161
-    ,command_FieldId_str               = 162
-    ,command_FieldId_tocamelcase       = 163
-    ,command_FieldId_tolowerunder      = 164
-    ,command_FieldId_value             = 165
+    ,command_FieldId_move              = 138
+    ,command_FieldId_dedup             = 139
+    ,command_FieldId_tgtdir            = 140
+    ,command_FieldId_commit            = 141
+    ,command_FieldId_targsrc           = 142
+    ,command_FieldId_name              = 143
+    ,command_FieldId_body              = 144
+    ,command_FieldId_func              = 145
+    ,command_FieldId_nextfile          = 146
+    ,command_FieldId_other             = 147
+    ,command_FieldId_updateproto       = 148
+    ,command_FieldId_listfunc          = 149
+    ,command_FieldId_iffy              = 150
+    ,command_FieldId_gen               = 151
+    ,command_FieldId_showloc           = 152
+    ,command_FieldId_showstatic        = 153
+    ,command_FieldId_showsortkey       = 154
+    ,command_FieldId_sortname          = 155
+    ,command_FieldId_update_authors    = 156
+    ,command_FieldId_indent            = 157
+    ,command_FieldId_linelim           = 158
+    ,command_FieldId_strayfile         = 159
+    ,command_FieldId_capture           = 160
+    ,command_FieldId_expand            = 161
+    ,command_FieldId_ignoreQuote       = 162
+    ,command_FieldId_maxpacket         = 163
+    ,command_FieldId_db                = 164
+    ,command_FieldId_createdb          = 165
+    ,command_FieldId_str               = 166
+    ,command_FieldId_tocamelcase       = 167
+    ,command_FieldId_tolowerunder      = 168
+    ,command_FieldId_value             = 169
 };
 
-enum { command_FieldIdEnum_N = 166 };
+enum { command_FieldIdEnum_N = 170 };
 
 namespace command { struct FieldId; }
 namespace command { struct Protocol; }
@@ -219,6 +223,8 @@ namespace command { struct mdbg; }
 namespace command { struct mdbg_proc; }
 namespace command { struct mysql2ssim; }
 namespace command { struct mysql2ssim_proc; }
+namespace command { struct orgfile; }
+namespace command { struct orgfile_proc; }
 namespace command { struct src_func; }
 namespace command { struct src_func_proc; }
 namespace command { struct src_hdr; }
@@ -1456,6 +1462,68 @@ algo::tempstr        mysql2ssim_ToCmdline(command::mysql2ssim_proc& parent) __at
 // Set all fields to initial values.
 void                 mysql2ssim_proc_Init(command::mysql2ssim_proc& parent);
 void                 mysql2ssim_proc_Uninit(command::mysql2ssim_proc& parent) __attribute__((nothrow));
+
+// --- command.orgfile
+// access: command.orgfile_proc.orgfile (Exec)
+struct orgfile { // command.orgfile
+    algo::cstring   in;       //   "data"  Input directory or filename, - for stdin
+    bool            move;     //   false  Read stdin, move files to tgtdir library
+    bool            dedup;    //   false  Read stdin, deduplicate files based on content
+    algo::cstring   tgtdir;   //   "~/image"  Destination directory
+    bool            commit;   //   false  Apply changes
+    orgfile();
+};
+
+bool                 orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
+// Read fields of command::orgfile from attributes of ascii tuple TUPLE
+bool                 orgfile_ReadTupleMaybe(command::orgfile &parent, algo::Tuple &tuple) __attribute__((nothrow));
+// Set all fields to initial values.
+void                 orgfile_Init(command::orgfile& parent);
+// print command-line args of command::orgfile to string  -- cprint:command.orgfile.Argv
+void                 orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) __attribute__((nothrow));
+// Convenience function that returns a full command line
+// Assume command is in a directory called bin
+tempstr              orgfile_ToCmdline(command::orgfile & row) __attribute__((nothrow));
+
+// --- command.orgfile_proc
+struct orgfile_proc { // command.orgfile_proc: Subprocess: 
+    algo::cstring      path;      //   "bin/orgfile"  path for executable
+    command::orgfile   cmd;       // command line for child process
+    algo::cstring      stdin;     // redirect for stdin
+    algo::cstring      stdout;    // redirect for stdout
+    algo::cstring      stderr;    // redirect for stderr
+    pid_t              pid;       //   0  pid of running child process
+    i32                timeout;   //   0  optional timeout for child process
+    i32                status;    //   0  last exit status of child process
+    orgfile_proc();
+    ~orgfile_proc();
+private:
+    // reftype of command.orgfile_proc.orgfile prohibits copy
+    orgfile_proc(const orgfile_proc&){ /*disallow copy constructor */}
+    void operator =(const orgfile_proc&){ /*disallow direct assignment */}
+};
+
+// Start subprocess
+// If subprocess already running, do nothing. Otherwise, start it
+int                  orgfile_Start(command::orgfile_proc& parent) __attribute__((nothrow));
+// Kill subprocess and wait
+void                 orgfile_Kill(command::orgfile_proc& parent);
+// Wait for subprocess to return
+void                 orgfile_Wait(command::orgfile_proc& parent) __attribute__((nothrow));
+// Start + Wait
+// Execute subprocess and return exit code
+int                  orgfile_Exec(command::orgfile_proc& parent) __attribute__((nothrow));
+// Start + Wait, throw exception on error
+// Execute subprocess; throw human-readable exception on error
+void                 orgfile_ExecX(command::orgfile_proc& parent);
+// Call execv()
+// Call execv with specified parameters -- cprint:orgfile.Argv
+int                  orgfile_Execv(command::orgfile_proc& parent) __attribute__((nothrow));
+algo::tempstr        orgfile_ToCmdline(command::orgfile_proc& parent) __attribute__((nothrow));
+
+// Set all fields to initial values.
+void                 orgfile_proc_Init(command::orgfile_proc& parent);
+void                 orgfile_proc_Uninit(command::orgfile_proc& parent) __attribute__((nothrow));
 
 // --- command.src_func
 // access: command.src_func_proc.src_func (Exec)

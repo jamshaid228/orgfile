@@ -69,6 +69,7 @@ const char *dmmeta_Ns_ns_lib_prot     = "lib_prot";
 const char *dmmeta_Ns_ns_lib_sql      = "lib_sql";
 const char *dmmeta_Ns_ns_mdbg         = "mdbg";
 const char *dmmeta_Ns_ns_mysql2ssim   = "mysql2ssim";
+const char *dmmeta_Ns_ns_orgfile      = "orgfile";
 const char *dmmeta_Ns_ns_report       = "report";
 const char *dmmeta_Ns_ns_src_func     = "src_func";
 const char *dmmeta_Ns_ns_src_hdr      = "src_hdr";

@@ -228,6 +228,7 @@ extern const char *  dmmeta_Ns_ns_lib_prot;     // lib_prot      fconst:dmmeta.N
 extern const char *  dmmeta_Ns_ns_lib_sql;      // lib_sql       fconst:dmmeta.Ns.ns/lib_sql
 extern const char *  dmmeta_Ns_ns_mdbg;         // mdbg          fconst:dmmeta.Ns.ns/mdbg
 extern const char *  dmmeta_Ns_ns_mysql2ssim;   // mysql2ssim    fconst:dmmeta.Ns.ns/mysql2ssim
+extern const char *  dmmeta_Ns_ns_orgfile;      // orgfile       fconst:dmmeta.Ns.ns/orgfile
 extern const char *  dmmeta_Ns_ns_report;       // report        fconst:dmmeta.Ns.ns/report
 extern const char *  dmmeta_Ns_ns_src_func;     // src_func      fconst:dmmeta.Ns.ns/src_func
 extern const char *  dmmeta_Ns_ns_src_hdr;      // src_hdr       fconst:dmmeta.Ns.ns/src_hdr

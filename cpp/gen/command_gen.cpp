@@ -163,6 +163,10 @@ const char* command::value_ToCstr(const command::FieldId& parent) {
         case command_FieldId_tables        : ret = "tables";  break;
         case command_FieldId_nologo        : ret = "nologo";  break;
         case command_FieldId_baddbok       : ret = "baddbok";  break;
+        case command_FieldId_move          : ret = "move";  break;
+        case command_FieldId_dedup         : ret = "dedup";  break;
+        case command_FieldId_tgtdir        : ret = "tgtdir";  break;
+        case command_FieldId_commit        : ret = "commit";  break;
         case command_FieldId_targsrc       : ret = "targsrc";  break;
         case command_FieldId_name          : ret = "name";  break;
         case command_FieldId_body          : ret = "body";  break;
@@ -342,6 +346,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 case LE_STR4('m','e','t','a'): {
                     value_SetEnum(parent,command_FieldId_meta); ret = true; break;
                 }
+                case LE_STR4('m','o','v','e'): {
+                    value_SetEnum(parent,command_FieldId_move); ret = true; break;
+                }
                 case LE_STR4('n','a','m','e'): {
                     value_SetEnum(parent,command_FieldId_name); ret = true; break;
                 }
@@ -388,6 +395,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR5('d','e','b','u','g'): {
                     value_SetEnum(parent,command_FieldId_debug); ret = true; break;
+                }
+                case LE_STR5('d','e','d','u','p'): {
+                    value_SetEnum(parent,command_FieldId_dedup); ret = true; break;
                 }
                 case LE_STR5('d','i','s','a','s'): {
                     value_SetEnum(parent,command_FieldId_disas); ret = true; break;
@@ -466,6 +476,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 case LE_STR6('b','i','g','e','n','d'): {
                     value_SetEnum(parent,command_FieldId_bigend); ret = true; break;
                 }
+                case LE_STR6('c','o','m','m','i','t'): {
+                    value_SetEnum(parent,command_FieldId_commit); ret = true; break;
+                }
                 case LE_STR6('c','r','e','a','t','e'): {
                     value_SetEnum(parent,command_FieldId_create); ret = true; break;
                 }
@@ -534,6 +547,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR6('t','a','r','g','e','t'): {
                     value_SetEnum(parent,command_FieldId_target); ret = true; break;
+                }
+                case LE_STR6('t','g','t','d','i','r'): {
+                    value_SetEnum(parent,command_FieldId_tgtdir); ret = true; break;
                 }
                 case LE_STR6('u','n','u','s','e','d'): {
                     value_SetEnum(parent,command_FieldId_unused); ret = true; break;
@@ -6775,6 +6791,258 @@ void command::mysql2ssim_proc_Uninit(command::mysql2ssim_proc& parent) {
     mysql2ssim_Kill(parent); // kill child, ensure forward progress
 }
 
+// --- command.orgfile..ReadFieldMaybe
+bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr field, algo::strptr strval) {
+    command::FieldId field_id;
+    (void)value_SetStrptrMaybe(field_id,field);
+    bool retval = true; // default is no error
+    switch(field_id) {
+        case command_FieldId_in: retval = algo::cstring_ReadStrptrMaybe(parent.in, strval); break;
+        case command_FieldId_move: retval = bool_ReadStrptrMaybe(parent.move, strval); break;
+        case command_FieldId_dedup: retval = bool_ReadStrptrMaybe(parent.dedup, strval); break;
+        case command_FieldId_tgtdir: retval = algo::cstring_ReadStrptrMaybe(parent.tgtdir, strval); break;
+        case command_FieldId_commit: retval = bool_ReadStrptrMaybe(parent.commit, strval); break;
+        default: break;
+    }
+    if (!retval) {
+        algo_lib::AppendErrtext("attr",field);
+    }
+    return retval;
+}
+
+// --- command.orgfile..ReadTupleMaybe
+// Read fields of command::orgfile from attributes of ascii tuple TUPLE
+bool command::orgfile_ReadTupleMaybe(command::orgfile &parent, algo::Tuple &tuple) {
+    bool retval = true;
+    ind_beg(algo::Tuple_attrs_curs,attr,tuple) {
+        retval = orgfile_ReadFieldMaybe(parent, attr.name, attr.value);
+        if (!retval) {
+            break;
+        }
+    }ind_end;
+    return retval;
+}
+
+// --- command.orgfile..PrintArgv
+// print command-line args of command::orgfile to string  -- cprint:command.orgfile.Argv
+void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
+    algo::tempstr temp;
+    (void)temp;
+    (void)row;
+    (void)str;
+    if (!(row.in == "data")) {
+        ch_RemoveAll(temp);
+        cstring_Print(row.in, temp);
+        str << " -in:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.move == false)) {
+        ch_RemoveAll(temp);
+        bool_Print(row.move, temp);
+        str << " -move:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.dedup == false)) {
+        ch_RemoveAll(temp);
+        bool_Print(row.dedup, temp);
+        str << " -dedup:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.tgtdir == "~/image")) {
+        ch_RemoveAll(temp);
+        cstring_Print(row.tgtdir, temp);
+        str << " -tgtdir:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.commit == false)) {
+        ch_RemoveAll(temp);
+        bool_Print(row.commit, temp);
+        str << " -commit:";
+        strptr_PrintBash(temp,str);
+    }
+}
+
+// --- command.orgfile..ToCmdline
+// Convenience function that returns a full command line
+// Assume command is in a directory called bin
+tempstr command::orgfile_ToCmdline(command::orgfile & row) {
+    tempstr ret;
+    ret << "bin/orgfile ";
+    orgfile_PrintArgv(row, ret);
+    // inherit less intense verbose, debug options
+    for (int i = 1; i < algo_lib::_db.cmdline.verbose; i++) {
+        ret << " -verbose";
+    }
+    for (int i = 1; i < algo_lib::_db.cmdline.debug; i++) {
+        ret << " -debug";
+    }
+    return ret;
+}
+
+// --- command.orgfile_proc.orgfile.Start
+// Start subprocess
+// If subprocess already running, do nothing. Otherwise, start it
+int command::orgfile_Start(command::orgfile_proc& parent) {
+    int retval = 0;
+    if (parent.pid == 0) {
+        verblog(orgfile_ToCmdline(parent)); // maybe print command
+        parent.status = 0; // reset last status
+        parent.pid = fork();
+        if (parent.pid == 0) { // child
+            algo_lib::DieWithParent();
+            if (parent.timeout > 0) {
+                alarm(parent.timeout);
+            }
+            algo_lib::ApplyRedirect(parent.stdin, 0);
+            algo_lib::ApplyRedirect(parent.stdout, 1);
+            algo_lib::ApplyRedirect(parent.stderr, 2);
+            retval = orgfile_Execv(parent);
+            if (retval != 0) { // if start fails, print error
+                int err=errno;
+                prerr("command.orgfile_execv"
+                <<Keyval("errno",err)
+                <<Keyval("errstr",strerror(err))
+                <<Keyval("comment","Execv failed"));
+            }
+            _exit(127); // if failed to start, exit anyway
+        } else if (parent.pid == -1) {
+            retval = errno; // failed to fork
+        } else {
+            retval = parent.status; // parent
+        }
+    }
+    return retval;
+}
+
+// --- command.orgfile_proc.orgfile.Kill
+// Kill subprocess and wait
+void command::orgfile_Kill(command::orgfile_proc& parent) {
+    if (parent.pid != 0) {
+        kill(parent.pid,9);
+        orgfile_Wait(parent);
+    }
+}
+
+// --- command.orgfile_proc.orgfile.Wait
+// Wait for subprocess to return
+void command::orgfile_Wait(command::orgfile_proc& parent) {
+    if (parent.pid != 0) {
+        int wait_flags = 0;
+        int wait_status = 0;
+        int rc = -1;
+        do {
+            // really wait for subprocess to exit
+            rc = waitpid(parent.pid,&wait_status,wait_flags);
+        } while (rc==-1 && errno==EINTR);
+        if (rc == parent.pid) {
+            parent.status = wait_status;
+            parent.pid = 0;
+        }
+    }
+}
+
+// --- command.orgfile_proc.orgfile.Exec
+// Start + Wait
+// Execute subprocess and return exit code
+int command::orgfile_Exec(command::orgfile_proc& parent) {
+    orgfile_Start(parent);
+    orgfile_Wait(parent);
+    return parent.status;
+}
+
+// --- command.orgfile_proc.orgfile.ExecX
+// Start + Wait, throw exception on error
+// Execute subprocess; throw human-readable exception on error
+void command::orgfile_ExecX(command::orgfile_proc& parent) {
+    int rc = orgfile_Exec(parent);
+    vrfy(rc==0, tempstr() << "algo_lib.exec" << Keyval("cmd",orgfile_ToCmdline(parent))
+    << Keyval("comment",algo::DescribeWaitStatus(parent.status)));
+}
+
+// --- command.orgfile_proc.orgfile.Execv
+// Call execv()
+// Call execv with specified parameters -- cprint:orgfile.Argv
+int command::orgfile_Execv(command::orgfile_proc& parent) {
+    char *argv[5+2]; // start of first arg (future pointer)
+    algo::tempstr temp;
+    int n_argv=0;
+    argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+    temp << parent.path;
+    ch_Alloc(temp) = 0;// NUL term for pathname
+
+    if (parent.cmd.in != "data") {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-in:";
+        cstring_Print(parent.cmd.in, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.move != false) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-move:";
+        bool_Print(parent.cmd.move, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.dedup != false) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-dedup:";
+        bool_Print(parent.cmd.dedup, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.tgtdir != "~/image") {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-tgtdir:";
+        cstring_Print(parent.cmd.tgtdir, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.commit != false) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-commit:";
+        bool_Print(parent.cmd.commit, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+    for (int i=0; i+1 < algo_lib::_db.cmdline.verbose; i++) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-verbose";
+        ch_Alloc(temp) = 0;
+    }
+    argv[n_argv] = NULL; // last pointer
+    while (n_argv>0) { // shift pointers
+        argv[--n_argv] += (u64)temp.ch_elems;
+    }
+    // if parent.path is relative, search for it in PATH
+    algo_lib::ResolveExecFname(parent.path);
+    return execv(Zeroterm(parent.path),argv);
+}
+
+// --- command.orgfile_proc.orgfile.ToCmdline
+algo::tempstr command::orgfile_ToCmdline(command::orgfile_proc& parent) {
+    algo::tempstr retval;
+    retval << parent.path << " ";
+    command::orgfile_PrintArgv(parent.cmd,retval);
+    if (ch_N(parent.stdin)) {
+        retval << " " << parent.stdin;
+    }
+    if (ch_N(parent.stdout)) {
+        retval << " " << parent.stdout;
+    }
+    if (ch_N(parent.stderr)) {
+        retval << " 2" << parent.stderr;
+    }
+    return retval;
+}
+
+// --- command.orgfile_proc..Uninit
+void command::orgfile_proc_Uninit(command::orgfile_proc& parent) {
+    command::orgfile_proc &row = parent; (void)row;
+
+    // command.orgfile_proc.orgfile.Uninit (Exec)  //
+    orgfile_Kill(parent); // kill child, ensure forward progress
+}
+
 // --- command.src_func.targsrc.Print
 // Print back to string
 void command::targsrc_Print(command::src_func& parent, algo::cstring &out) {
@@ -8926,6 +9194,12 @@ inline static void command::SizeCheck() {
     algo_assert(_offset_of(command::mysql2ssim,nologo) == 65);
     algo_assert(_offset_of(command::mysql2ssim,baddbok) == 66);
     algo_assert(sizeof(command::mysql2ssim) == 72);
+    algo_assert(_offset_of(command::orgfile,in) == 0);
+    algo_assert(_offset_of(command::orgfile,move) == 16);
+    algo_assert(_offset_of(command::orgfile,dedup) == 17);
+    algo_assert(_offset_of(command::orgfile,tgtdir) == 24);
+    algo_assert(_offset_of(command::orgfile,commit) == 40);
+    algo_assert(sizeof(command::orgfile) == 48);
     algo_assert(_offset_of(command::src_func,in) == 0);
     algo_assert(_offset_of(command::src_func,targsrc) == 16);
     algo_assert(_offset_of(command::src_func,name) == 112);

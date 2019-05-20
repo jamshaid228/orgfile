@@ -67,6 +67,7 @@ dev.gitfile  gitfile:bin/msloc.pl
 dev.gitfile  gitfile:bin/mysql2ssim
 dev.gitfile  gitfile:bin/nogen
 dev.gitfile  gitfile:bin/normalize
+dev.gitfile  gitfile:bin/orgphoto
 dev.gitfile  gitfile:bin/rebuild-amc
 dev.gitfile  gitfile:bin/select-bootstrap
 dev.gitfile  gitfile:bin/sloc.pl
@@ -288,6 +289,7 @@ dev.gitfile  gitfile:cpp/gen/lib_prot_gen.cpp
 dev.gitfile  gitfile:cpp/gen/lib_sql_gen.cpp
 dev.gitfile  gitfile:cpp/gen/mdbg_gen.cpp
 dev.gitfile  gitfile:cpp/gen/mysql2ssim_gen.cpp
+dev.gitfile  gitfile:cpp/gen/orgfile_gen.cpp
 dev.gitfile  gitfile:cpp/gen/report_gen.cpp
 dev.gitfile  gitfile:cpp/gen/src_func_gen.cpp
 dev.gitfile  gitfile:cpp/gen/src_hdr_gen.cpp
@@ -324,6 +326,7 @@ dev.gitfile  gitfile:cpp/lib/lib_mysql.cpp
 dev.gitfile  gitfile:cpp/lib/lib_sql.cpp
 dev.gitfile  gitfile:cpp/mdbg.cpp
 dev.gitfile  gitfile:cpp/mysql2ssim.cpp
+dev.gitfile  gitfile:cpp/orgfile.cpp
 dev.gitfile  gitfile:cpp/src/func/check.cpp
 dev.gitfile  gitfile:cpp/src/func/edit.cpp
 dev.gitfile  gitfile:cpp/src/func/fileloc.cpp
@@ -565,6 +568,8 @@ dev.gitfile  gitfile:include/gen/mdbg_gen.h
 dev.gitfile  gitfile:include/gen/mdbg_gen.inl.h
 dev.gitfile  gitfile:include/gen/mysql2ssim_gen.h
 dev.gitfile  gitfile:include/gen/mysql2ssim_gen.inl.h
+dev.gitfile  gitfile:include/gen/orgfile_gen.h
+dev.gitfile  gitfile:include/gen/orgfile_gen.inl.h
 dev.gitfile  gitfile:include/gen/report_gen.h
 dev.gitfile  gitfile:include/gen/report_gen.inl.h
 dev.gitfile  gitfile:include/gen/src_func_gen.h
@@ -587,6 +592,7 @@ dev.gitfile  gitfile:include/lib/lib_json.inl.h
 dev.gitfile  gitfile:include/lib/lib_mysql.h
 dev.gitfile  gitfile:include/lib_git.h
 dev.gitfile  gitfile:include/lib_sql.h
+dev.gitfile  gitfile:include/orgphoto.h
 dev.gitfile  gitfile:include/sha.h
 dev.gitfile  gitfile:include/src_func.h
 dev.gitfile  gitfile:include/strconv.h

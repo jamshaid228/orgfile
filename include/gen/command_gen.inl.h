@@ -414,6 +414,37 @@ inline void command::mysql2ssim_proc_Init(command::mysql2ssim_proc& parent) {
     parent.timeout = i32(0);
     parent.status = i32(0);
 }
+inline command::orgfile::orgfile() {
+    command::orgfile_Init(*this);
+}
+
+
+// --- command.orgfile..Init
+// Set all fields to initial values.
+inline void command::orgfile_Init(command::orgfile& parent) {
+    parent.in = algo::strptr("data");
+    parent.move = bool(false);
+    parent.dedup = bool(false);
+    parent.tgtdir = algo::strptr("~/image");
+    parent.commit = bool(false);
+}
+inline command::orgfile_proc::orgfile_proc() {
+    command::orgfile_proc_Init(*this);
+}
+
+inline command::orgfile_proc::~orgfile_proc() {
+    command::orgfile_proc_Uninit(*this);
+}
+
+
+// --- command.orgfile_proc..Init
+// Set all fields to initial values.
+inline void command::orgfile_proc_Init(command::orgfile_proc& parent) {
+    parent.path = algo::strptr("bin/orgfile");
+    parent.pid = pid_t(0);
+    parent.timeout = i32(0);
+    parent.status = i32(0);
+}
 inline command::src_func::src_func() {
     command::src_func_Init(*this);
 }
