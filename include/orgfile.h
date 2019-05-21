@@ -37,13 +37,22 @@ namespace orgfile { // update-hdr
     // A single filehash may have multiple filenames associated with it.
     orgfile::FFilename *AccessFilename(strptr fname);
 
-    // Determine canonic for FNAME based on its date.
+    // Determine new filename for FNAME.
+    // If -bydate was specified, the new path is
+    // tgtdir/YYYY-mm-dd/<filename>
+    // Otherwise, it is just
+    // tgtdir/<filename>
     tempstr GetTgtFname(strptr pathname);
 
     // Read filenames from STDIN.
     // For each file, compute its file hash.
     // Delete file file if it's a duplicate (and -commit was specified)
     void DedupFiles();
+
+    // Move file SRC to TGTFNAME.
+    // If destination file exists, it is pointed to by TGT.
+    // If the move succeeds, source entry is deleted to reflect this.
+    void MoveFile(orgfile::FFilename *src, orgfile::FFilename *tgt, strptr tgtfname);
 
     // Read filenames files from STDIN (one per line).
     // For each file, determine its new destination by calling GetTgtFname.

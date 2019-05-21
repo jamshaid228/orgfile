@@ -33,6 +33,7 @@ const char *orgfile_help =
 "    -dedup            Read stdin, deduplicate files based on content. default: false\n"
 "    -tgtdir   string  Destination directory. default: \"~/image\"\n"
 "    -commit           Apply changes. default: false\n"
+"    -bydate           Use tgtdir/YYYY-mm-dd/ directory. default: true\n"
 "    -verbose          Enable verbose mode\n"
 "    -debug            Enable debug mode\n"
 "    -version          Show version information\n"
@@ -47,6 +48,7 @@ const char *orgfile_syntax =
 " -dedup:flag\n"
 " -tgtdir:string=\"~/image\"\n"
 " -commit:flag\n"
+" -bydate:flag=true\n"
 ;
 } // namespace orgfile
 namespace orgfile {
@@ -174,51 +176,69 @@ orgfile::FFilename* orgfile::filename_AllocMaybe() {
     return row;
 }
 
+// --- orgfile.FDb.filename.Delete
+// Remove row from all global and cross indices, then deallocate row
+void orgfile::filename_Delete(orgfile::FFilename &row) {
+    row.~FFilename();
+    filename_FreeMem(row);
+}
+
 // --- orgfile.FDb.filename.AllocMem
-// Allocate space for one element. If no memory available, return NULL.
+// Allocate space for one element
+// If no memory available, return NULL.
 void* orgfile::filename_AllocMem() {
-    u64 new_nelems     = _db.filename_n+1;
-    // compute level and index on level
-    u64 bsr   = algo::u64_BitScanReverse(new_nelems);
-    u64 base  = u64(1)<<bsr;
-    u64 index = new_nelems-base;
-    void *ret = NULL;
-    // if level doesn't exist yet, create it
-    orgfile::FFilename*  lev   = NULL;
-    if (bsr < 32) {
-        lev = _db.filename_lary[bsr];
-        if (!lev) {
-            lev=(orgfile::FFilename*)algo_lib::malloc_AllocMem(sizeof(orgfile::FFilename) * (u64(1)<<bsr));
-            _db.filename_lary[bsr] = lev;
-        }
+    orgfile::FFilename *row = _db.filename_free;
+    if (UNLIKELY(!row)) {
+        filename_Reserve(1);
+        row = _db.filename_free;
     }
-    // allocate element from this level
-    if (lev) {
-        _db.filename_n = new_nelems;
-        ret = lev + index;
+    if (row) {
+        _db.filename_free = row->filename_next;
+    }
+    return row;
+}
+
+// --- orgfile.FDb.filename.FreeMem
+// Remove mem from all global and cross indices, then deallocate mem
+void orgfile::filename_FreeMem(orgfile::FFilename &row) {
+    if (UNLIKELY(row.filename_next != (orgfile::FFilename*)-1)) {
+        FatalErrorExit("orgfile.tpool_double_delete  pool:orgfile.FDb.filename  comment:'double deletion caught'");
+    }
+    row.filename_next = _db.filename_free; // insert into free list
+    _db.filename_free  = &row;
+}
+
+// --- orgfile.FDb.filename.Reserve
+// Preallocate memory for N more elements
+// Return number of elements actually reserved.
+u64 orgfile::filename_Reserve(u64 n_elems) {
+    u64 ret = 0;
+    while (ret < n_elems) {
+        u64 size = _db.filename_blocksize; // underlying allocator is probably Lpool
+        u64 reserved = filename_ReserveMem(size);
+        ret += reserved;
+        if (reserved == 0) {
+            break;
+        }
     }
     return ret;
 }
 
-// --- orgfile.FDb.filename.RemoveAll
-// Remove all elements from Lary
-void orgfile::filename_RemoveAll() {
-    for (u64 n = _db.filename_n; n>0; ) {
-        n--;
-        filename_qFind(u64(n)).~FFilename(); // destroy last element
-        _db.filename_n = n;
+// --- orgfile.FDb.filename.ReserveMem
+// Allocate block of given size, break up into small elements and append to free list.
+// Return number of elements reserved.
+u64 orgfile::filename_ReserveMem(u64 size) {
+    u64 ret = 0;
+    if (size >= sizeof(orgfile::FFilename)) {
+        orgfile::FFilename *mem = (orgfile::FFilename*)algo_lib::malloc_AllocMem(size);
+        ret = mem ? size / sizeof(orgfile::FFilename) : 0;
+        // add newly allocated elements to the free list;
+        for (u64 i=0; i < ret; i++) {
+            mem[i].filename_next = _db.filename_free;
+            _db.filename_free = mem+i;
+        }
     }
-}
-
-// --- orgfile.FDb.filename.RemoveLast
-// Delete last element of array. Do nothing if array is empty.
-void orgfile::filename_RemoveLast() {
-    u64 n = _db.filename_n;
-    if (n > 0) {
-        n -= 1;
-        filename_qFind(u64(n)).~FFilename();
-        _db.filename_n = n;
-    }
+    return ret;
 }
 
 // --- orgfile.FDb.filename.XrefMaybe
@@ -579,17 +599,9 @@ inline static i32 orgfile::trace_N() {
 // --- orgfile.FDb..Init
 // Set all fields to initial values.
 void orgfile::FDb_Init() {
-    // initialize LAry filename (orgfile.FDb.filename)
-    _db.filename_n = 0;
-    memset(_db.filename_lary, 0, sizeof(_db.filename_lary)); // zero out all level pointers
-    orgfile::FFilename* filename_first = (orgfile::FFilename*)algo_lib::malloc_AllocMem(sizeof(orgfile::FFilename) * (u64(1)<<4));
-    if (!filename_first) {
-        FatalErrorExit("out of memory");
-    }
-    for (int i = 0; i < 4; i++) {
-        _db.filename_lary[i]  = filename_first;
-        filename_first    += 1ULL<<i;
-    }
+    // filename: initialize Tpool
+    _db.filename_free      = NULL;
+    _db.filename_blocksize = BumpToPow2(64 * sizeof(orgfile::FFilename)); // allocate 64-127 elements at a time
     // initialize hash table for orgfile::FFilename;
     _db.ind_filename_n             	= 0; // (orgfile.FDb.ind_filename)
     _db.ind_filename_buckets_n     	= 4; // (orgfile.FDb.ind_filename)
@@ -633,9 +645,6 @@ void orgfile::FDb_Uninit() {
 
     // orgfile.FDb.ind_filename.Uninit (Thash)  //
     // skip destruction of ind_filename in global scope
-
-    // orgfile.FDb.filename.Uninit (Lary)  //
-    // skip destruction in global scope
 }
 
 // --- orgfile.FFilehash.c_filename.Insert

@@ -167,6 +167,7 @@ const char* command::value_ToCstr(const command::FieldId& parent) {
         case command_FieldId_dedup         : ret = "dedup";  break;
         case command_FieldId_tgtdir        : ret = "tgtdir";  break;
         case command_FieldId_commit        : ret = "commit";  break;
+        case command_FieldId_bydate        : ret = "bydate";  break;
         case command_FieldId_targsrc       : ret = "targsrc";  break;
         case command_FieldId_name          : ret = "name";  break;
         case command_FieldId_body          : ret = "body";  break;
@@ -475,6 +476,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR6('b','i','g','e','n','d'): {
                     value_SetEnum(parent,command_FieldId_bigend); ret = true; break;
+                }
+                case LE_STR6('b','y','d','a','t','e'): {
+                    value_SetEnum(parent,command_FieldId_bydate); ret = true; break;
                 }
                 case LE_STR6('c','o','m','m','i','t'): {
                     value_SetEnum(parent,command_FieldId_commit); ret = true; break;
@@ -6802,6 +6806,7 @@ bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr fiel
         case command_FieldId_dedup: retval = bool_ReadStrptrMaybe(parent.dedup, strval); break;
         case command_FieldId_tgtdir: retval = algo::cstring_ReadStrptrMaybe(parent.tgtdir, strval); break;
         case command_FieldId_commit: retval = bool_ReadStrptrMaybe(parent.commit, strval); break;
+        case command_FieldId_bydate: retval = bool_ReadStrptrMaybe(parent.bydate, strval); break;
         default: break;
     }
     if (!retval) {
@@ -6858,6 +6863,12 @@ void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
         ch_RemoveAll(temp);
         bool_Print(row.commit, temp);
         str << " -commit:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.bydate == true)) {
+        ch_RemoveAll(temp);
+        bool_Print(row.bydate, temp);
+        str << " -bydate:";
         strptr_PrintBash(temp,str);
     }
 }
@@ -6963,7 +6974,7 @@ void command::orgfile_ExecX(command::orgfile_proc& parent) {
 // Call execv()
 // Call execv with specified parameters -- cprint:orgfile.Argv
 int command::orgfile_Execv(command::orgfile_proc& parent) {
-    char *argv[5+2]; // start of first arg (future pointer)
+    char *argv[6+2]; // start of first arg (future pointer)
     algo::tempstr temp;
     int n_argv=0;
     argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
@@ -7002,6 +7013,13 @@ int command::orgfile_Execv(command::orgfile_proc& parent) {
         argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
         temp << "-commit:";
         bool_Print(parent.cmd.commit, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.bydate != true) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-bydate:";
+        bool_Print(parent.cmd.bydate, temp);
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
     for (int i=0; i+1 < algo_lib::_db.cmdline.verbose; i++) {
@@ -9199,6 +9217,7 @@ inline static void command::SizeCheck() {
     algo_assert(_offset_of(command::orgfile,dedup) == 17);
     algo_assert(_offset_of(command::orgfile,tgtdir) == 24);
     algo_assert(_offset_of(command::orgfile,commit) == 40);
+    algo_assert(_offset_of(command::orgfile,bydate) == 41);
     algo_assert(sizeof(command::orgfile) == 48);
     algo_assert(_offset_of(command::src_func,in) == 0);
     algo_assert(_offset_of(command::src_func,targsrc) == 16);

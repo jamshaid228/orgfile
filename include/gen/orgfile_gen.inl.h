@@ -15,48 +15,6 @@ inline orgfile::trace::trace() {
 }
 
 
-// --- orgfile.FDb.filename.EmptyQ
-// Return true if index is empty
-inline bool orgfile::filename_EmptyQ() {
-    return _db.filename_n == 0;
-}
-
-// --- orgfile.FDb.filename.Find
-// Look up row by row id. Return NULL if out of range
-inline orgfile::FFilename* orgfile::filename_Find(u64 t) {
-    u64 x = t + 1;
-    u64 bsr   = algo::u64_BitScanReverse(x);
-    u64 base  = u64(1)<<bsr;
-    u64 index = x-base;
-    orgfile::FFilename *retval = NULL;
-    if (LIKELY(x <= u64(_db.filename_n))) {
-        retval = &_db.filename_lary[bsr][index];
-    }
-    return retval;
-}
-
-// --- orgfile.FDb.filename.Last
-// Return pointer to last element of array, or NULL if array is empty
-inline orgfile::FFilename* orgfile::filename_Last() {
-    return filename_Find(u64(_db.filename_n-1));
-}
-
-// --- orgfile.FDb.filename.N
-// Return number of items in the pool
-inline i32 orgfile::filename_N() {
-    return _db.filename_n;
-}
-
-// --- orgfile.FDb.filename.qFind
-// 'quick' Access row by row id. No bounds checking.
-inline orgfile::FFilename& orgfile::filename_qFind(u64 t) {
-    u64 x = t + 1;
-    u64 bsr   = algo::u64_BitScanReverse(x);
-    u64 base  = u64(1)<<bsr;
-    u64 index = x-base;
-    return _db.filename_lary[bsr][index];
-}
-
 // --- orgfile.FDb.ind_filename.EmptyQ
 // Return true if hash is empty
 inline bool orgfile::ind_filename_EmptyQ() {
@@ -121,31 +79,6 @@ inline bool orgfile::ind_filehash_EmptyQ() {
 // Return number of items in the hash
 inline i32 orgfile::ind_filehash_N() {
     return _db.ind_filehash_n;
-}
-
-// --- orgfile.FDb.filename_curs.Reset
-// cursor points to valid item
-inline void orgfile::_db_filename_curs_Reset(_db_filename_curs &curs, orgfile::FDb &parent) {
-    curs.parent = &parent;
-    curs.index = 0;
-}
-
-// --- orgfile.FDb.filename_curs.ValidQ
-// cursor points to valid item
-inline bool orgfile::_db_filename_curs_ValidQ(_db_filename_curs &curs) {
-    return curs.index < _db.filename_n;
-}
-
-// --- orgfile.FDb.filename_curs.Next
-// proceed to next item
-inline void orgfile::_db_filename_curs_Next(_db_filename_curs &curs) {
-    curs.index++;
-}
-
-// --- orgfile.FDb.filename_curs.Access
-// item access
-inline orgfile::FFilename& orgfile::_db_filename_curs_Access(_db_filename_curs &curs) {
-    return filename_qFind(u64(curs.index));
 }
 
 // --- orgfile.FDb.filehash_curs.Reset
@@ -267,8 +200,8 @@ inline orgfile::FFilename::~FFilename() {
 // Set all fields to initial values.
 inline void orgfile::FFilename_Init(orgfile::FFilename& filename) {
     filename.p_filehash = NULL;
-    filename.deleted = bool(false);
     filename.filehash_c_filename_in_ary = bool(false);
+    filename.filename_next = (orgfile::FFilename*)-1; // (orgfile.FDb.filename) not-in-tpool's freelist
     filename.ind_filename_next = (orgfile::FFilename*)-1; // (orgfile.FDb.ind_filename) not-in-hash
 }
 inline orgfile::FieldId::FieldId(i32                            in_value)

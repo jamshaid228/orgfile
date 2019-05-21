@@ -25,7 +25,6 @@ namespace orgfile { struct trace; }
 namespace orgfile { struct FDb; }
 namespace orgfile { struct FFilename; }
 namespace orgfile { struct FieldId; }
-namespace orgfile { struct _db_filename_curs; }
 namespace orgfile { struct _db_ind_filename_curs; }
 namespace orgfile { struct _db_filehash_curs; }
 namespace orgfile { struct _db_ind_filehash_curs; }
@@ -52,8 +51,8 @@ void                 trace_Print(orgfile::trace & row, algo::cstring &str) __att
 // create: orgfile.FDb._db (Global)
 struct FDb { // orgfile.FDb
     command::orgfile       cmdline;                      //
-    orgfile::FFilename*    filename_lary[32];            // level array
-    i32                    filename_n;                   // number of elements in array
+    u32                    filename_blocksize;           // # bytes per block
+    orgfile::FFilename*    filename_free;                //
     orgfile::FFilename**   ind_filename_buckets_elems;   // pointer to bucket array
     i32                    ind_filename_buckets_n;       // number of elements in bucket array
     i32                    ind_filename_n;               // number of elements in the hash table
@@ -90,22 +89,19 @@ bool                 _db_XrefMaybe();
 orgfile::FFilename&  filename_Alloc() __attribute__((__warn_unused_result__, nothrow));
 // Allocate memory for new element. If out of memory, return NULL.
 orgfile::FFilename*  filename_AllocMaybe() __attribute__((__warn_unused_result__, nothrow));
-// Allocate space for one element. If no memory available, return NULL.
+// Remove row from all global and cross indices, then deallocate row
+void                 filename_Delete(orgfile::FFilename &row) __attribute__((nothrow));
+// Allocate space for one element
+// If no memory available, return NULL.
 void*                filename_AllocMem() __attribute__((__warn_unused_result__, nothrow));
-// Return true if index is empty
-bool                 filename_EmptyQ() __attribute__((nothrow));
-// Look up row by row id. Return NULL if out of range
-orgfile::FFilename*  filename_Find(u64 t) __attribute__((__warn_unused_result__, nothrow));
-// Return pointer to last element of array, or NULL if array is empty
-orgfile::FFilename*  filename_Last() __attribute__((nothrow, pure));
-// Return number of items in the pool
-i32                  filename_N() __attribute__((__warn_unused_result__, nothrow, pure));
-// Remove all elements from Lary
-void                 filename_RemoveAll() __attribute__((nothrow));
-// Delete last element of array. Do nothing if array is empty.
-void                 filename_RemoveLast() __attribute__((nothrow));
-// 'quick' Access row by row id. No bounds checking.
-orgfile::FFilename&  filename_qFind(u64 t) __attribute__((nothrow));
+// Remove mem from all global and cross indices, then deallocate mem
+void                 filename_FreeMem(orgfile::FFilename &row) __attribute__((nothrow));
+// Preallocate memory for N more elements
+// Return number of elements actually reserved.
+u64                  filename_Reserve(u64 n_elems) __attribute__((nothrow));
+// Allocate block of given size, break up into small elements and append to free list.
+// Return number of elements reserved.
+u64                  filename_ReserveMem(u64 size) __attribute__((nothrow));
 // Insert row into all appropriate indices. If error occurs, store error
 // in algo_lib::_db.errtext and return false. Caller must Delete or Unref such row.
 bool                 filename_XrefMaybe(orgfile::FFilename &row);
@@ -167,14 +163,6 @@ void                 ind_filehash_Remove(orgfile::FFilehash& row) __attribute__(
 // Reserve enough room in the hash for N more elements. Return success code.
 void                 ind_filehash_Reserve(int n) __attribute__((nothrow));
 
-// cursor points to valid item
-void                 _db_filename_curs_Reset(_db_filename_curs &curs, orgfile::FDb &parent);
-// cursor points to valid item
-bool                 _db_filename_curs_ValidQ(_db_filename_curs &curs);
-// proceed to next item
-void                 _db_filename_curs_Next(_db_filename_curs &curs);
-// item access
-orgfile::FFilename&  _db_filename_curs_Access(_db_filename_curs &curs);
 // cursor points to valid item
 void                 _db_filehash_curs_Reset(_db_filehash_curs &curs, orgfile::FDb &parent);
 // cursor points to valid item
@@ -242,21 +230,20 @@ orgfile::FFilename&  filehash_c_filename_curs_Access(filehash_c_filename_curs &c
 void                 FFilehash_Uninit(orgfile::FFilehash& filehash) __attribute__((nothrow));
 
 // --- orgfile.FFilename
-// create: orgfile.FDb.filename (Lary)
+// create: orgfile.FDb.filename (Tpool)
 // global access: ind_filename (Thash)
 // access: orgfile.FFilehash.c_filename (Ptrary)
 struct FFilename { // orgfile.FFilename
+    orgfile::FFilename*   filename_next;                // Pointer to next free element int tpool
     orgfile::FFilename*   ind_filename_next;            // hash next
     algo::cstring         filename;                     //
     algo::Smallstr40      filehash;                     //
     orgfile::FFilehash*   p_filehash;                   // reference to parent row
-    bool                  deleted;                      //   false
     bool                  filehash_c_filename_in_ary;   //   false  membership flag
 private:
     friend orgfile::FFilename&  filename_Alloc() __attribute__((__warn_unused_result__, nothrow));
     friend orgfile::FFilename*  filename_AllocMaybe() __attribute__((__warn_unused_result__, nothrow));
-    friend void                 filename_RemoveAll() __attribute__((nothrow));
-    friend void                 filename_RemoveLast() __attribute__((nothrow));
+    friend void                 filename_Delete(orgfile::FFilename &row) __attribute__((nothrow));
     FFilename();
     ~FFilename();
     FFilename(const FFilename&){ /*disallow copy constructor */}
@@ -305,14 +292,6 @@ bool                 FieldId_ReadStrptrMaybe(orgfile::FieldId &parent, algo::str
 void                 FieldId_Init(orgfile::FieldId& parent);
 // print string representation of orgfile::FieldId to string LHS, no header -- cprint:orgfile.FieldId.String
 void                 FieldId_Print(orgfile::FieldId & row, algo::cstring &str) __attribute__((nothrow));
-
-struct _db_filename_curs {// cursor
-    typedef orgfile::FFilename ChildType;
-    orgfile::FDb *parent;
-    i64 index;
-    _db_filename_curs(){ parent=NULL; index=0; }
-};
-
 
 struct _db_filehash_curs {// cursor
     typedef orgfile::FFilehash ChildType;

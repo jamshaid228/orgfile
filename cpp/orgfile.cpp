@@ -94,22 +94,21 @@ static tempstr TildeExpand(strptr str) {
 
 // -----------------------------------------------------------------------------
 
-// Determine canonic for FNAME based on its date.
+// Determine new filename for FNAME.
+// If -bydate was specified, the new path is
+//   tgtdir/YYYY-mm-dd/<filename>
+// Otherwise, it is just
+//   tgtdir/<filename>
 tempstr orgfile::GetTgtFname(strptr pathname) {
-    tempstr year,month,day;
-    bool knowdate=false;
-    tempstr tgtdir;
-    if (GetYMD(pathname,year,month,day)) {
-        tgtdir << DirFileJoin(_db.cmdline.tgtdir, year)
-               <<"/"<<year<<"-"<<month<<"-"<<day;
-        knowdate=true;
+    tempstr tgtdir(_db.cmdline.tgtdir);
+    if (_db.cmdline.bydate) {// organizing by date?
+        tempstr year,month,day;
+        if (GetYMD(pathname,year,month,day)) {
+            tgtdir = DirFileJoin(tgtdir, year)<<"/"<<year<<"-"<<month<<"-"<<day;
+        }
     }
-    tempstr ret;
     tempstr filename(StripDirName(pathname));
-    if (knowdate) {
-        ret = DirFileJoin(tgtdir,filename);
-    }
-    return ret;
+    return DirFileJoin(tgtdir,filename);
 }
 
 // -----------------------------------------------------------------------------
@@ -124,10 +123,11 @@ void orgfile::DedupFiles() {
             prlog("orgfile.dedup"
                   <<Keyval("pathname",pathname)
                   <<Keyval("orig",c_filename_Find(*srcfilename->p_filehash,0)->filename)
-                  <<Keyval("comment","file is a duplicate)"));
+                  <<Keyval("comment","file is a duplicate"));
             if (_db.cmdline.commit) {// do dedup
-                DeleteFile(srcfilename->filename);
-                srcfilename->deleted=true;
+                if (DeleteFile(srcfilename->filename)) {
+                    filename_Delete(*srcfilename);
+                }
             }
         }
     }ind_end;
@@ -135,6 +135,32 @@ void orgfile::DedupFiles() {
 
 // -----------------------------------------------------------------------------
 
+// Move file SRC to TGTFNAME.
+// If destination file exists, it is pointed to by TGT.
+// If the move succeeds, source entry is deleted to reflect this.
+void orgfile::MoveFile(orgfile::FFilename *src, orgfile::FFilename *tgt, strptr tgtfname) {
+    vrfy(tgt==NULL || src->filehash==tgt->filehash, "internal error: move with overwrite");
+    CreateDirRecurse(GetDirName(tgtfname));
+    tempstr cmd;
+    cmd<<"mv ";
+    strptr_PrintBash(src->filename,cmd);
+    cmd<<" ";
+    strptr_PrintBash(tgtfname,cmd);
+    // source and tgt files may be on different filesystems,
+    // don't use rename(); use the mv command
+    if (SysCmd(cmd)==0) {
+        if (!tgt) {
+            tgt = &filename_Alloc();
+            tgt->filename = tgtfname;
+            tgt->filehash = src->filehash;// definitely exists
+            vrfy_(filename_XrefMaybe(*tgt));
+        }
+        // move succeeded, entry no longer needed
+        filename_Delete(*src);
+    }
+}
+
+// -----------------------------------------------------------------------------
 // Read filenames files from STDIN (one per line).
 // For each file, determine its new destination by calling GetTgtFname.
 // Create new directory structure as appropriate.
@@ -150,32 +176,25 @@ void orgfile::MoveFiles() {
         } else {
             comment = "file doesn't exist";
         }
-        orgfile::FFilename *srcfilename = AccessFilename(pathname);
-        orgfile::FFilename *tgtfilename = AccessFilename(tgtfile);
+        orgfile::FFilename *src = AccessFilename(pathname);
+        orgfile::FFilename *tgt = NULL;
         if (tgtfile != "" && tgtfile != pathname) {
             if (!FileQ(tgtfile)) {
                 canmove = true;
                 comment = "move file";
             } else {
-                canmove = srcfilename->filehash == tgtfilename->filehash;
+                // only if it's known to exist
+                tgt = AccessFilename(tgtfile);
+                canmove = src->filehash == tgt->filehash;
                 comment = "move file (proven duplicate)";
             }
-        }
-        prlog("orgfile.file"
-              <<Keyval("pathname",pathname)
-              <<Keyval("tgtfile",tgtfile)
-              <<Keyval("comment",comment));
-        if (canmove && _db.cmdline.commit) {// do move
-            srcfilename->deleted=true; // moved
-            CreateDirRecurse(GetDirName(tgtfile));
-            tempstr cmd;
-            cmd<<"mv ";
-            strptr_PrintBash(pathname,cmd);
-            cmd<<" ";
-            strptr_PrintBash(tgtfile,cmd);
-            // source and tgt files may be on different filesystems,
-            // don't use rename(); use the mv command
-            SysCmd(cmd);
+            prlog("orgfile.file"
+                  <<Keyval("pathname",pathname)
+                  <<Keyval("tgtfile",tgtfile)
+                  <<Keyval("comment",comment));
+            if (canmove && _db.cmdline.commit) {// do move
+                MoveFile(src,tgt,tgtfile);
+            }
         }
     }ind_end;
 }
