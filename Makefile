@@ -1,6 +1,13 @@
 default:
 	ai
 
+install:
+	ai
+	sudo cp build/release/orgfile /usr/local/bin/
+
+uninstall:
+	sudo rm /usr/local/bin/orgfile
+
 clean:
 	rm -rf temp/acr_ed
 	git clean -dfx build temp

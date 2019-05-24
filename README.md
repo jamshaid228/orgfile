@@ -1,6 +1,7 @@
 This file was created with 'atf_norm readme' from files in [txt/](txt/) -- *do not edit*
 
 ## Table Of Contents
+<<<<<<< HEAD
    * [About](#about)
    * [Why Use It](#why-use-it)
    * [Setup and Installation](#setup-and-installation)
@@ -25,9 +26,12 @@ This file was created with 'atf_norm readme' from files in [txt/](txt/) -- *do n
    * [Coding Style](#coding-style)
    * [Testimonials](#testimonials)
 
+=======
+   * [Orgfile: organize file by date and by contents](#orgfile-organize-file-by-date-and-by-contents)
+>>>>>>> orgfile: fix move with rename
 
-## About
 
+<<<<<<< HEAD
 The home for this project is at https://github.com/alexeilebedev/openacr
 
 This is OpenACR, an open-source version of acr and amc, powerful
@@ -298,3 +302,6 @@ path to the .cpp file with `/`s replaced by `.`s.
 
 ## Testimonials
 [See txt/testimonials.md](txt/testimonials.md)
+=======
+## Orgfile: organize file by date and by contents
+>>>>>>> orgfile: fix move with rename

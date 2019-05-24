@@ -117,16 +117,18 @@ tempstr orgfile::GetTgtFname(strptr pathname) {
 // For each file, compute its file hash.
 // Delete file file if it's a duplicate (and -commit was specified)
 void orgfile::DedupFiles() {
-    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) {
+    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) if (FileQ(pathname)) {
         orgfile::FFilename *srcfilename = AccessFilename(pathname);
-        if (c_filename_N(*srcfilename->p_filehash) > 1) {// can dedup?
-            prlog("orgfile.dedup"
-                  <<Keyval("pathname",pathname)
-                  <<Keyval("orig",c_filename_Find(*srcfilename->p_filehash,0)->filename)
-                  <<Keyval("comment","file is a duplicate"));
-            if (_db.cmdline.commit) {// do dedup
-                if (DeleteFile(srcfilename->filename)) {
-                    filename_Delete(*srcfilename);
+        if (Regx_Match(_db.cmdline.dedup_pathregx, pathname)) {
+            if (c_filename_N(*srcfilename->p_filehash) > 1) {// can dedup?
+                prlog("orgfile.dedup"
+                      <<Keyval("original",c_filename_Find(*srcfilename->p_filehash,0)->filename)
+                      <<Keyval("duplicate",pathname)
+                      <<Keyval("comment","contents are identical (based ond hash)"));
+                if (_db.cmdline.commit) {// do dedup
+                    if (DeleteFile(srcfilename->filename)) {
+                        filename_Delete(*srcfilename);
+                    }
                 }
             }
         }
@@ -161,13 +163,27 @@ void orgfile::MoveFile(orgfile::FFilename *src, orgfile::FFilename *tgt, strptr 
 }
 
 // -----------------------------------------------------------------------------
+
+// Add suffixes to FNAME until it becomes a suitable
+// name for a new file
+static tempstr MakeUnique(tempstr fname) {
+    int index=2;
+    cstring ret;
+    do {
+        ret = tempstr() << StripExt(fname) << "-" << index << GetFileExt(fname);
+        index++;
+    } while (FileQ(ret));
+    return tempstr(ret);
+}
+
+// -----------------------------------------------------------------------------
 // Read filenames files from STDIN (one per line).
 // For each file, determine its new destination by calling GetTgtFname.
 // Create new directory structure as appropriate.
 // Move the file into place if there was no conflict, or if the file content
 //   hash exactly matches
 void orgfile::MoveFiles() {
-    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) {
+    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) if (FileQ(pathname)) {
         bool canmove=false;
         tempstr comment;
         tempstr tgtfile;
@@ -186,7 +202,15 @@ void orgfile::MoveFiles() {
                 // only if it's known to exist
                 tgt = AccessFilename(tgtfile);
                 canmove = src->filehash == tgt->filehash;
-                comment = "move file (proven duplicate)";
+                if (canmove) {
+                    comment = "move file (proven duplicate)";
+                } else {
+                    comment = "move file (renaming for uniqueness)";
+                    tgtfile = MakeUnique(tgtfile);
+                    // how could this possibly return anything except NULL?
+                    tgt = ind_filename_Find(tgtfile);
+                    canmove = true;
+                }
             }
             prlog("orgfile.file"
                   <<Keyval("pathname",pathname)

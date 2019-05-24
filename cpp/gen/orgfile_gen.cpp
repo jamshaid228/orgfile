@@ -28,17 +28,18 @@ orgfile::FDb    orgfile::_db;     // dependency found via dev.targdep
 namespace orgfile {
 const char *orgfile_help =
 "Usage: orgfile [options]\n"
-"    -in       string  Input directory or filename, - for stdin. default: \"data\"\n"
-"    -move             Read stdin, move files to tgtdir library. default: false\n"
-"    -dedup            Read stdin, deduplicate files based on content. default: false\n"
-"    -tgtdir   string  Destination directory. default: \"~/image\"\n"
-"    -commit           Apply changes. default: false\n"
-"    -bydate           Use tgtdir/YYYY-mm-dd/ directory. default: true\n"
-"    -verbose          Enable verbose mode\n"
-"    -debug            Enable debug mode\n"
-"    -version          Show version information\n"
-"    -sig              Print SHA1 signatures for dispatches\n"
-"    -help             Print this screen and exit\n"
+"    -in              string  Input directory or filename, - for stdin. default: \"data\"\n"
+"    -move                    Read stdin, move files to tgtdir library. default: false\n"
+"    -dedup                   Read stdin, deduplicate files based on content. default: false\n"
+"    -dedup_pathregx  string  Only allow deleting files that match this regx. default: \"%\"\n"
+"    -tgtdir          string  Destination directory. default: \"~/image\"\n"
+"    -commit                  Apply changes. default: false\n"
+"    -bydate                  Use tgtdir/YYYY-mm-dd/ directory. default: true\n"
+"    -verbose                 Enable verbose mode\n"
+"    -debug                   Enable debug mode\n"
+"    -version                 Show version information\n"
+"    -sig                     Print SHA1 signatures for dispatches\n"
+"    -help                    Print this screen and exit\n"
 ;
 
 
@@ -46,6 +47,7 @@ const char *orgfile_syntax =
 "-in:string=\"data\"\n"
 " -move:flag\n"
 " -dedup:flag\n"
+" -dedup_pathregx:string=\"%\"\n"
 " -tgtdir:string=\"~/image\"\n"
 " -commit:flag\n"
 " -bydate:flag=true\n"

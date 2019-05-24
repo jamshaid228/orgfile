@@ -418,17 +418,6 @@ inline command::orgfile::orgfile() {
     command::orgfile_Init(*this);
 }
 
-
-// --- command.orgfile..Init
-// Set all fields to initial values.
-inline void command::orgfile_Init(command::orgfile& parent) {
-    parent.in = algo::strptr("data");
-    parent.move = bool(false);
-    parent.dedup = bool(false);
-    parent.tgtdir = algo::strptr("~/image");
-    parent.commit = bool(false);
-    parent.bydate = bool(true);
-}
 inline command::orgfile_proc::orgfile_proc() {
     command::orgfile_proc_Init(*this);
 }

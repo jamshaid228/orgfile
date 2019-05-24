@@ -165,6 +165,7 @@ const char* command::value_ToCstr(const command::FieldId& parent) {
         case command_FieldId_baddbok       : ret = "baddbok";  break;
         case command_FieldId_move          : ret = "move";  break;
         case command_FieldId_dedup         : ret = "dedup";  break;
+        case command_FieldId_dedup_pathregx: ret = "dedup_pathregx";  break;
         case command_FieldId_tgtdir        : ret = "tgtdir";  break;
         case command_FieldId_commit        : ret = "commit";  break;
         case command_FieldId_bydate        : ret = "bydate";  break;
@@ -809,6 +810,10 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
         }
         case 14: {
             switch (ReadLE64(rhs.elems)) {
+                case LE_STR8('d','e','d','u','p','_','p','a'): {
+                    if (memcmp(rhs.elems+8,"thregx",6)==0) { value_SetEnum(parent,command_FieldId_dedup_pathregx); ret = true; break; }
+                    break;
+                }
                 case LE_STR8('u','p','d','a','t','e','_','a'): {
                     if (memcmp(rhs.elems+8,"uthors",6)==0) { value_SetEnum(parent,command_FieldId_update_authors); ret = true; break; }
                     break;
@@ -6795,6 +6800,21 @@ void command::mysql2ssim_proc_Uninit(command::mysql2ssim_proc& parent) {
     mysql2ssim_Kill(parent); // kill child, ensure forward progress
 }
 
+// --- command.orgfile.dedup_pathregx.Print
+// Print back to string
+void command::dedup_pathregx_Print(command::orgfile& parent, algo::cstring &out) {
+    Regx_Print(parent.dedup_pathregx, out);
+}
+
+// --- command.orgfile.dedup_pathregx.ReadStrptrMaybe
+// Read Regx from string
+// Convert string to field. Return success value
+bool command::dedup_pathregx_ReadStrptrMaybe(command::orgfile& parent, algo::strptr in) {
+    Regx_ReadSql(parent.dedup_pathregx, in, true);
+    bool retval = true;// !parent.dedup_pathregx.parseerror; -- TODO: uncomment
+    return retval;
+}
+
 // --- command.orgfile..ReadFieldMaybe
 bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr field, algo::strptr strval) {
     command::FieldId field_id;
@@ -6804,6 +6824,7 @@ bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr fiel
         case command_FieldId_in: retval = algo::cstring_ReadStrptrMaybe(parent.in, strval); break;
         case command_FieldId_move: retval = bool_ReadStrptrMaybe(parent.move, strval); break;
         case command_FieldId_dedup: retval = bool_ReadStrptrMaybe(parent.dedup, strval); break;
+        case command_FieldId_dedup_pathregx: retval = dedup_pathregx_ReadStrptrMaybe(parent, strval); break;
         case command_FieldId_tgtdir: retval = algo::cstring_ReadStrptrMaybe(parent.tgtdir, strval); break;
         case command_FieldId_commit: retval = bool_ReadStrptrMaybe(parent.commit, strval); break;
         case command_FieldId_bydate: retval = bool_ReadStrptrMaybe(parent.bydate, strval); break;
@@ -6826,6 +6847,18 @@ bool command::orgfile_ReadTupleMaybe(command::orgfile &parent, algo::Tuple &tupl
         }
     }ind_end;
     return retval;
+}
+
+// --- command.orgfile..Init
+// Set all fields to initial values.
+void command::orgfile_Init(command::orgfile& parent) {
+    parent.in = algo::strptr("data");
+    parent.move = bool(false);
+    parent.dedup = bool(false);
+    Regx_ReadSql(parent.dedup_pathregx, "%", true);
+    parent.tgtdir = algo::strptr("~/image");
+    parent.commit = bool(false);
+    parent.bydate = bool(true);
 }
 
 // --- command.orgfile..PrintArgv
@@ -6851,6 +6884,12 @@ void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
         ch_RemoveAll(temp);
         bool_Print(row.dedup, temp);
         str << " -dedup:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.dedup_pathregx.expr == "%")) {
+        ch_RemoveAll(temp);
+        command::dedup_pathregx_Print(const_cast<command::orgfile&>(row), temp);
+        str << " -dedup_pathregx:";
         strptr_PrintBash(temp,str);
     }
     if (!(row.tgtdir == "~/image")) {
@@ -6974,7 +7013,7 @@ void command::orgfile_ExecX(command::orgfile_proc& parent) {
 // Call execv()
 // Call execv with specified parameters -- cprint:orgfile.Argv
 int command::orgfile_Execv(command::orgfile_proc& parent) {
-    char *argv[6+2]; // start of first arg (future pointer)
+    char *argv[7+2]; // start of first arg (future pointer)
     algo::tempstr temp;
     int n_argv=0;
     argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
@@ -6999,6 +7038,13 @@ int command::orgfile_Execv(command::orgfile_proc& parent) {
         argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
         temp << "-dedup:";
         bool_Print(parent.cmd.dedup, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.dedup_pathregx.expr != "%") {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-dedup_pathregx:";
+        command::dedup_pathregx_Print(parent.cmd, temp);
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
 
@@ -9215,10 +9261,11 @@ inline static void command::SizeCheck() {
     algo_assert(_offset_of(command::orgfile,in) == 0);
     algo_assert(_offset_of(command::orgfile,move) == 16);
     algo_assert(_offset_of(command::orgfile,dedup) == 17);
-    algo_assert(_offset_of(command::orgfile,tgtdir) == 24);
-    algo_assert(_offset_of(command::orgfile,commit) == 40);
-    algo_assert(_offset_of(command::orgfile,bydate) == 41);
-    algo_assert(sizeof(command::orgfile) == 48);
+    algo_assert(_offset_of(command::orgfile,dedup_pathregx) == 24);
+    algo_assert(_offset_of(command::orgfile,tgtdir) == 120);
+    algo_assert(_offset_of(command::orgfile,commit) == 136);
+    algo_assert(_offset_of(command::orgfile,bydate) == 137);
+    algo_assert(sizeof(command::orgfile) == 144);
     algo_assert(_offset_of(command::src_func,in) == 0);
     algo_assert(_offset_of(command::src_func,targsrc) == 16);
     algo_assert(_offset_of(command::src_func,name) == 112);

@@ -154,40 +154,41 @@ enum command_FieldIdEnum {                    // command.FieldId.value
     ,command_FieldId_baddbok           = 137
     ,command_FieldId_move              = 138
     ,command_FieldId_dedup             = 139
-    ,command_FieldId_tgtdir            = 140
-    ,command_FieldId_commit            = 141
-    ,command_FieldId_bydate            = 142
-    ,command_FieldId_targsrc           = 143
-    ,command_FieldId_name              = 144
-    ,command_FieldId_body              = 145
-    ,command_FieldId_func              = 146
-    ,command_FieldId_nextfile          = 147
-    ,command_FieldId_other             = 148
-    ,command_FieldId_updateproto       = 149
-    ,command_FieldId_listfunc          = 150
-    ,command_FieldId_iffy              = 151
-    ,command_FieldId_gen               = 152
-    ,command_FieldId_showloc           = 153
-    ,command_FieldId_showstatic        = 154
-    ,command_FieldId_showsortkey       = 155
-    ,command_FieldId_sortname          = 156
-    ,command_FieldId_update_authors    = 157
-    ,command_FieldId_indent            = 158
-    ,command_FieldId_linelim           = 159
-    ,command_FieldId_strayfile         = 160
-    ,command_FieldId_capture           = 161
-    ,command_FieldId_expand            = 162
-    ,command_FieldId_ignoreQuote       = 163
-    ,command_FieldId_maxpacket         = 164
-    ,command_FieldId_db                = 165
-    ,command_FieldId_createdb          = 166
-    ,command_FieldId_str               = 167
-    ,command_FieldId_tocamelcase       = 168
-    ,command_FieldId_tolowerunder      = 169
-    ,command_FieldId_value             = 170
+    ,command_FieldId_dedup_pathregx    = 140
+    ,command_FieldId_tgtdir            = 141
+    ,command_FieldId_commit            = 142
+    ,command_FieldId_bydate            = 143
+    ,command_FieldId_targsrc           = 144
+    ,command_FieldId_name              = 145
+    ,command_FieldId_body              = 146
+    ,command_FieldId_func              = 147
+    ,command_FieldId_nextfile          = 148
+    ,command_FieldId_other             = 149
+    ,command_FieldId_updateproto       = 150
+    ,command_FieldId_listfunc          = 151
+    ,command_FieldId_iffy              = 152
+    ,command_FieldId_gen               = 153
+    ,command_FieldId_showloc           = 154
+    ,command_FieldId_showstatic        = 155
+    ,command_FieldId_showsortkey       = 156
+    ,command_FieldId_sortname          = 157
+    ,command_FieldId_update_authors    = 158
+    ,command_FieldId_indent            = 159
+    ,command_FieldId_linelim           = 160
+    ,command_FieldId_strayfile         = 161
+    ,command_FieldId_capture           = 162
+    ,command_FieldId_expand            = 163
+    ,command_FieldId_ignoreQuote       = 164
+    ,command_FieldId_maxpacket         = 165
+    ,command_FieldId_db                = 166
+    ,command_FieldId_createdb          = 167
+    ,command_FieldId_str               = 168
+    ,command_FieldId_tocamelcase       = 169
+    ,command_FieldId_tolowerunder      = 170
+    ,command_FieldId_value             = 171
 };
 
-enum { command_FieldIdEnum_N = 171 };
+enum { command_FieldIdEnum_N = 172 };
 
 namespace command { struct FieldId; }
 namespace command { struct Protocol; }
@@ -1467,14 +1468,21 @@ void                 mysql2ssim_proc_Uninit(command::mysql2ssim_proc& parent) __
 // --- command.orgfile
 // access: command.orgfile_proc.orgfile (Exec)
 struct orgfile { // command.orgfile
-    algo::cstring   in;       //   "data"  Input directory or filename, - for stdin
-    bool            move;     //   false  Read stdin, move files to tgtdir library
-    bool            dedup;    //   false  Read stdin, deduplicate files based on content
-    algo::cstring   tgtdir;   //   "~/image"  Destination directory
-    bool            commit;   //   false  Apply changes
-    bool            bydate;   //   true  Use tgtdir/YYYY-mm-dd/ directory
+    algo::cstring    in;               //   "data"  Input directory or filename, - for stdin
+    bool             move;             //   false  Read stdin, move files to tgtdir library
+    bool             dedup;            //   false  Read stdin, deduplicate files based on content
+    algo_lib::Regx   dedup_pathregx;   //   "%"  Regx of algo::cstring
+    algo::cstring    tgtdir;           //   "~/image"  Destination directory
+    bool             commit;           //   false  Apply changes
+    bool             bydate;           //   true  Use tgtdir/YYYY-mm-dd/ directory
     orgfile();
 };
+
+// Print back to string
+void                 dedup_pathregx_Print(command::orgfile& parent, algo::cstring &out) __attribute__((nothrow));
+// Read Regx from string
+// Convert string to field. Return success value
+bool                 dedup_pathregx_ReadStrptrMaybe(command::orgfile& parent, algo::strptr in) __attribute__((nothrow));
 
 bool                 orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
 // Read fields of command::orgfile from attributes of ascii tuple TUPLE
