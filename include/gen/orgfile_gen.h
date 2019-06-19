@@ -14,17 +14,21 @@
 
 // --- orgfile_FieldIdEnum
 
-enum orgfile_FieldIdEnum {        // orgfile.FieldId.value
-     orgfile_FieldId_value   = 0
+enum orgfile_FieldIdEnum {           // orgfile.FieldId.value
+     orgfile_FieldId_pathname   = 0
+    ,orgfile_FieldId_tgtfile    = 1
+    ,orgfile_FieldId_comment    = 2
+    ,orgfile_FieldId_value      = 3
 };
 
-enum { orgfile_FieldIdEnum_N = 1 };
+enum { orgfile_FieldIdEnum_N = 4 };
 
 namespace orgfile { struct FFilehash; }
 namespace orgfile { struct trace; }
 namespace orgfile { struct FDb; }
 namespace orgfile { struct FFilename; }
 namespace orgfile { struct FieldId; }
+namespace orgfile { struct file; }
 namespace orgfile { struct _db_ind_filename_curs; }
 namespace orgfile { struct _db_filehash_curs; }
 namespace orgfile { struct _db_ind_filehash_curs; }
@@ -293,6 +297,21 @@ void                 FieldId_Init(orgfile::FieldId& parent);
 // print string representation of orgfile::FieldId to string LHS, no header -- cprint:orgfile.FieldId.String
 void                 FieldId_Print(orgfile::FieldId & row, algo::cstring &str) __attribute__((nothrow));
 
+// --- orgfile.file
+struct file { // orgfile.file
+    algo::cstring   pathname;   //
+    algo::cstring   tgtfile;    //
+    algo::cstring   comment;    //
+    file();
+};
+
+bool                 file_ReadFieldMaybe(orgfile::file &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
+// Read fields of orgfile::file from an ascii string.
+// The format of the string is an ssim Tuple
+bool                 file_ReadStrptrMaybe(orgfile::file &parent, algo::strptr in_str);
+// print string representation of orgfile::file to string LHS, no header -- cprint:orgfile.file.String
+void                 file_Print(orgfile::file & row, algo::cstring &str) __attribute__((nothrow));
+
 struct _db_filehash_curs {// cursor
     typedef orgfile::FFilehash ChildType;
     orgfile::FDb *parent;
@@ -314,4 +333,5 @@ int                  main(int argc, char **argv);
 namespace algo {
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::trace &row);// cfmt:orgfile.trace.String
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::FieldId &row);// cfmt:orgfile.FieldId.String
+inline algo::cstring &operator <<(algo::cstring &str, const orgfile::file &row);// cfmt:orgfile.file.String
 }

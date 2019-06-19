@@ -169,6 +169,7 @@ const char* command::value_ToCstr(const command::FieldId& parent) {
         case command_FieldId_tgtdir        : ret = "tgtdir";  break;
         case command_FieldId_commit        : ret = "commit";  break;
         case command_FieldId_bydate        : ret = "bydate";  break;
+        case command_FieldId_undo          : ret = "undo";  break;
         case command_FieldId_targsrc       : ret = "targsrc";  break;
         case command_FieldId_name          : ret = "name";  break;
         case command_FieldId_body          : ret = "body";  break;
@@ -371,6 +372,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR4('t','y','p','e'): {
                     value_SetEnum(parent,command_FieldId_type); ret = true; break;
+                }
+                case LE_STR4('u','n','d','o'): {
+                    value_SetEnum(parent,command_FieldId_undo); ret = true; break;
                 }
                 case LE_STR4('x','r','e','f'): {
                     value_SetEnum(parent,command_FieldId_xref); ret = true; break;
@@ -6828,6 +6832,7 @@ bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr fiel
         case command_FieldId_tgtdir: retval = algo::cstring_ReadStrptrMaybe(parent.tgtdir, strval); break;
         case command_FieldId_commit: retval = bool_ReadStrptrMaybe(parent.commit, strval); break;
         case command_FieldId_bydate: retval = bool_ReadStrptrMaybe(parent.bydate, strval); break;
+        case command_FieldId_undo: retval = bool_ReadStrptrMaybe(parent.undo, strval); break;
         default: break;
     }
     if (!retval) {
@@ -6859,6 +6864,7 @@ void command::orgfile_Init(command::orgfile& parent) {
     parent.tgtdir = algo::strptr("~/image");
     parent.commit = bool(false);
     parent.bydate = bool(true);
+    parent.undo = bool(false);
 }
 
 // --- command.orgfile..PrintArgv
@@ -6908,6 +6914,12 @@ void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
         ch_RemoveAll(temp);
         bool_Print(row.bydate, temp);
         str << " -bydate:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.undo == false)) {
+        ch_RemoveAll(temp);
+        bool_Print(row.undo, temp);
+        str << " -undo:";
         strptr_PrintBash(temp,str);
     }
 }
@@ -7013,7 +7025,7 @@ void command::orgfile_ExecX(command::orgfile_proc& parent) {
 // Call execv()
 // Call execv with specified parameters -- cprint:orgfile.Argv
 int command::orgfile_Execv(command::orgfile_proc& parent) {
-    char *argv[7+2]; // start of first arg (future pointer)
+    char *argv[8+2]; // start of first arg (future pointer)
     algo::tempstr temp;
     int n_argv=0;
     argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
@@ -7066,6 +7078,13 @@ int command::orgfile_Execv(command::orgfile_proc& parent) {
         argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
         temp << "-bydate:";
         bool_Print(parent.cmd.bydate, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.undo != false) {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-undo:";
+        bool_Print(parent.cmd.undo, temp);
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
     for (int i=0; i+1 < algo_lib::_db.cmdline.verbose; i++) {
@@ -9265,6 +9284,7 @@ inline static void command::SizeCheck() {
     algo_assert(_offset_of(command::orgfile,tgtdir) == 120);
     algo_assert(_offset_of(command::orgfile,commit) == 136);
     algo_assert(_offset_of(command::orgfile,bydate) == 137);
+    algo_assert(_offset_of(command::orgfile,undo) == 138);
     algo_assert(sizeof(command::orgfile) == 144);
     algo_assert(_offset_of(command::src_func,in) == 0);
     algo_assert(_offset_of(command::src_func,targsrc) == 16);

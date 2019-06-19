@@ -2,8 +2,7 @@ default:
 	ai
 
 install:
-	ai
-	sudo cp build/release/orgfile /usr/local/bin/
+	 cp build/release/orgfile /usr/local/bin/
 
 uninstall:
 	sudo rm /usr/local/bin/orgfile

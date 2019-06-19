@@ -483,6 +483,7 @@ dmmeta.cfmt  cfmt:lib_iconv.Icd.String  printfmt:Raw  read:N  print:Y  sep:""  g
 dmmeta.cfmt  cfmt:lib_json.FNode.String  printfmt:Tuple  read:N  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:lib_json.FParser.String  printfmt:Tuple  read:N  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:lib_json.FldKey.String  printfmt:Tuple  read:N  print:Y  sep:""  genop:Y  comment:""
+dmmeta.cfmt  cfmt:orgfile.file.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:report.abt.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:report.acr.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:report.acr_check.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""

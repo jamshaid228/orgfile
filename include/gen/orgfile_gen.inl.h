@@ -236,6 +236,9 @@ inline orgfile::FieldId::operator orgfile_FieldIdEnum () const {
 inline void orgfile::FieldId_Init(orgfile::FieldId& parent) {
     parent.value = i32(-1);
 }
+inline orgfile::file::file() {
+}
+
 
 inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::trace &row) {// cfmt:orgfile.trace.String
     orgfile::trace_Print(const_cast<orgfile::trace&>(row), str);
@@ -244,5 +247,10 @@ inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::trace
 
 inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::FieldId &row) {// cfmt:orgfile.FieldId.String
     orgfile::FieldId_Print(const_cast<orgfile::FieldId&>(row), str);
+    return str;
+}
+
+inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::file &row) {// cfmt:orgfile.file.String
+    orgfile::file_Print(const_cast<orgfile::file&>(row), str);
     return str;
 }

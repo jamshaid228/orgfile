@@ -35,6 +35,7 @@ const char *orgfile_help =
 "    -tgtdir          string  Destination directory. default: \"~/image\"\n"
 "    -commit                  Apply changes. default: false\n"
 "    -bydate                  Use tgtdir/YYYY-mm-dd/ directory. default: true\n"
+"    -undo                    Read previous orgfile output, undoing movement. default: false\n"
 "    -verbose                 Enable verbose mode\n"
 "    -debug                   Enable debug mode\n"
 "    -version                 Show version information\n"
@@ -51,6 +52,7 @@ const char *orgfile_syntax =
 " -tgtdir:string=\"~/image\"\n"
 " -commit:flag\n"
 " -bydate:flag=true\n"
+" -undo:flag\n"
 ;
 } // namespace orgfile
 namespace orgfile {
@@ -738,6 +740,9 @@ void orgfile::FFilename_Uninit(orgfile::FFilename& filename) {
 const char* orgfile::value_ToCstr(const orgfile::FieldId& parent) {
     const char *ret = NULL;
     switch(value_GetEnum(parent)) {
+        case orgfile_FieldId_pathname      : ret = "pathname";  break;
+        case orgfile_FieldId_tgtfile       : ret = "tgtfile";  break;
+        case orgfile_FieldId_comment       : ret = "comment";  break;
         case orgfile_FieldId_value         : ret = "value";  break;
     }
     return ret;
@@ -766,6 +771,25 @@ bool orgfile::value_SetStrptrMaybe(orgfile::FieldId& parent, algo::strptr rhs) {
             switch (u64(ReadLE32(rhs.elems))|(u64(rhs[4])<<32)) {
                 case LE_STR5('v','a','l','u','e'): {
                     value_SetEnum(parent,orgfile_FieldId_value); ret = true; break;
+                }
+            }
+            break;
+        }
+        case 7: {
+            switch (u64(ReadLE32(rhs.elems))|(u64(ReadLE16(rhs.elems+4))<<32)|(u64(rhs[6])<<48)) {
+                case LE_STR7('c','o','m','m','e','n','t'): {
+                    value_SetEnum(parent,orgfile_FieldId_comment); ret = true; break;
+                }
+                case LE_STR7('t','g','t','f','i','l','e'): {
+                    value_SetEnum(parent,orgfile_FieldId_tgtfile); ret = true; break;
+                }
+            }
+            break;
+        }
+        case 8: {
+            switch (ReadLE64(rhs.elems)) {
+                case LE_STR8('p','a','t','h','n','a','m','e'): {
+                    value_SetEnum(parent,orgfile_FieldId_pathname); ret = true; break;
                 }
             }
             break;
@@ -805,6 +829,51 @@ bool orgfile::FieldId_ReadStrptrMaybe(orgfile::FieldId &parent, algo::strptr in_
 // print string representation of orgfile::FieldId to string LHS, no header -- cprint:orgfile.FieldId.String
 void orgfile::FieldId_Print(orgfile::FieldId & row, algo::cstring &str) {
     orgfile::value_Print(row, str);
+}
+
+// --- orgfile.file..ReadFieldMaybe
+bool orgfile::file_ReadFieldMaybe(orgfile::file &parent, algo::strptr field, algo::strptr strval) {
+    orgfile::FieldId field_id;
+    (void)value_SetStrptrMaybe(field_id,field);
+    bool retval = true; // default is no error
+    switch(field_id) {
+        case orgfile_FieldId_pathname: retval = algo::cstring_ReadStrptrMaybe(parent.pathname, strval); break;
+        case orgfile_FieldId_tgtfile: retval = algo::cstring_ReadStrptrMaybe(parent.tgtfile, strval); break;
+        case orgfile_FieldId_comment: retval = algo::cstring_ReadStrptrMaybe(parent.comment, strval); break;
+        default: break;
+    }
+    if (!retval) {
+        algo_lib::AppendErrtext("attr",field);
+    }
+    return retval;
+}
+
+// --- orgfile.file..ReadStrptrMaybe
+// Read fields of orgfile::file from an ascii string.
+// The format of the string is an ssim Tuple
+bool orgfile::file_ReadStrptrMaybe(orgfile::file &parent, algo::strptr in_str) {
+    bool retval = true;
+    retval = algo::StripTypeTag(in_str, "orgfile.file");
+    ind_beg(algo::Attr_curs, attr, in_str) {
+        retval = retval && file_ReadFieldMaybe(parent, attr.name, attr.value);
+    }ind_end;
+    return retval;
+}
+
+// --- orgfile.file..Print
+// print string representation of orgfile::file to string LHS, no header -- cprint:orgfile.file.String
+void orgfile::file_Print(orgfile::file & row, algo::cstring &str) {
+    algo::tempstr temp;
+    str << "orgfile.file";
+
+    algo::cstring_Print(row.pathname, temp);
+    PrintAttrSpaceReset(str,"pathname", temp);
+
+    algo::cstring_Print(row.tgtfile, temp);
+    PrintAttrSpaceReset(str,"tgtfile", temp);
+
+    algo::cstring_Print(row.comment, temp);
+    PrintAttrSpaceReset(str,"comment", temp);
 }
 
 // --- orgfile...main

@@ -137,20 +137,28 @@ void orgfile::DedupFiles() {
 
 // -----------------------------------------------------------------------------
 
+// Move file from FROM to TO
+// Use the move command as it can transfer files across filesystem boundaries
+static int SystemMv(algo::strptr from, algo::strptr to) {
+    CreateDirRecurse(GetDirName(to));
+    tempstr cmd;
+    cmd<<"mv ";
+    strptr_PrintBash(from,cmd);
+    cmd<<" ";
+    strptr_PrintBash(to,cmd);
+    // source and tgt files may be on different filesystems,
+    // don't use rename(); use the mv command
+    return SysCmd(cmd);
+}
+
+// -----------------------------------------------------------------------------
+
 // Move file SRC to TGTFNAME.
 // If destination file exists, it is pointed to by TGT.
 // If the move succeeds, source entry is deleted to reflect this.
 void orgfile::MoveFile(orgfile::FFilename *src, orgfile::FFilename *tgt, strptr tgtfname) {
     vrfy(tgt==NULL || src->filehash==tgt->filehash, "internal error: move with overwrite");
-    CreateDirRecurse(GetDirName(tgtfname));
-    tempstr cmd;
-    cmd<<"mv ";
-    strptr_PrintBash(src->filename,cmd);
-    cmd<<" ";
-    strptr_PrintBash(tgtfname,cmd);
-    // source and tgt files may be on different filesystems,
-    // don't use rename(); use the mv command
-    if (SysCmd(cmd)==0) {
+    if (SystemMv(src->filename, tgtfname)) {
         if (!tgt) {
             tgt = &filename_Alloc();
             tgt->filename = tgtfname;
@@ -166,7 +174,7 @@ void orgfile::MoveFile(orgfile::FFilename *src, orgfile::FFilename *tgt, strptr 
 
 // Add suffixes to FNAME until it becomes a suitable
 // name for a new file
-static tempstr MakeUnique(tempstr fname) {
+static tempstr MakeUnique(strptr fname) {
     int index=2;
     cstring ret;
     do {
@@ -185,39 +193,61 @@ static tempstr MakeUnique(tempstr fname) {
 void orgfile::MoveFiles() {
     ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) if (FileQ(pathname)) {
         bool canmove=false;
-        tempstr comment;
-        tempstr tgtfile;
+        orgfile::file action;
+        action.pathname=pathname;
         if (FileQ(pathname)) {
-            tgtfile=GetTgtFname(pathname);
+            action.tgtfile=GetTgtFname(pathname);
         } else {
-            comment = "file doesn't exist";
+            action.comment = "file doesn't exist";
         }
         orgfile::FFilename *src = AccessFilename(pathname);
         orgfile::FFilename *tgt = NULL;
-        if (tgtfile != "" && tgtfile != pathname) {
-            if (!FileQ(tgtfile)) {
+        if (action.tgtfile != "" && action.tgtfile != pathname) {
+            if (!FileQ(action.tgtfile)) {
                 canmove = true;
-                comment = "move file";
+                action.comment = "move file";
             } else {
                 // only if it's known to exist
-                tgt = AccessFilename(tgtfile);
+                tgt = AccessFilename(action.tgtfile);
                 canmove = src->filehash == tgt->filehash;
                 if (canmove) {
-                    comment = "move file (proven duplicate)";
+                    action.comment = "move file (proven duplicate)";
                 } else {
-                    comment = "move file (renaming for uniqueness)";
-                    tgtfile = MakeUnique(tgtfile);
+                    action.comment = "move file (renaming for uniqueness)";
+                    action.tgtfile = MakeUnique(action.tgtfile);
                     // how could this possibly return anything except NULL?
-                    tgt = ind_filename_Find(tgtfile);
+                    tgt = ind_filename_Find(action.tgtfile);
                     canmove = true;
                 }
             }
-            prlog("orgfile.file"
-                  <<Keyval("pathname",pathname)
-                  <<Keyval("tgtfile",tgtfile)
-                  <<Keyval("comment",comment));
+            prlog(action);
             if (canmove && _db.cmdline.commit) {// do move
-                MoveFile(src,tgt,tgtfile);
+                MoveFile(src,tgt,action.tgtfile);
+            }
+        }
+    }ind_end;
+}
+
+// -----------------------------------------------------------------------------
+
+// No hashes are created during this operation.
+// Just read orgfile.file records on stdin and move files back
+// from TGTFILE -> PATHNAME
+void orgfile::Undo() {
+    ind_beg(algo::FileLine_curs,line,algo::Fildes(0)) {
+        orgfile::file action;
+        if (file_ReadStrptrMaybe(action,line)) {
+            TSwap(action.pathname, action.tgtfile);
+            bool canmove=false;
+            if (FileQ(action.pathname)) {// source
+                action.comment = "move file back";
+                canmove=true;
+            } else {
+                action.comment = "original not found";
+            }
+            prlog(action);
+            if (canmove && _db.cmdline.commit) {// do move
+                SystemMv(action.pathname, action.tgtfile);
             }
         }
     }ind_end;
@@ -232,7 +262,9 @@ void orgfile::Main() {
          <<Keyval("tgtdir",_db.cmdline.tgtdir)
          <<Keyval("comment", "directory doesn't seem to exist"));
 
-    if (_db.cmdline.move) {
+    if (_db.cmdline.undo) {
+        Undo();
+    } else if (_db.cmdline.move) {
         MoveFiles();
     } else if (_db.cmdline.dedup) {
         DedupFiles();

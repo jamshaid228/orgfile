@@ -60,5 +60,10 @@ namespace orgfile { // update-hdr
     // Move the file into place if there was no conflict, or if the file content
     // hash exactly matches
     void MoveFiles();
+
+    // No hashes are created during this operation.
+    // Just read orgfile.file records on stdin and move files back
+    // from TGTFILE -> PATHNAME
+    void Undo();
     void Main();
 }

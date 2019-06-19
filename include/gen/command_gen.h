@@ -158,37 +158,38 @@ enum command_FieldIdEnum {                    // command.FieldId.value
     ,command_FieldId_tgtdir            = 141
     ,command_FieldId_commit            = 142
     ,command_FieldId_bydate            = 143
-    ,command_FieldId_targsrc           = 144
-    ,command_FieldId_name              = 145
-    ,command_FieldId_body              = 146
-    ,command_FieldId_func              = 147
-    ,command_FieldId_nextfile          = 148
-    ,command_FieldId_other             = 149
-    ,command_FieldId_updateproto       = 150
-    ,command_FieldId_listfunc          = 151
-    ,command_FieldId_iffy              = 152
-    ,command_FieldId_gen               = 153
-    ,command_FieldId_showloc           = 154
-    ,command_FieldId_showstatic        = 155
-    ,command_FieldId_showsortkey       = 156
-    ,command_FieldId_sortname          = 157
-    ,command_FieldId_update_authors    = 158
-    ,command_FieldId_indent            = 159
-    ,command_FieldId_linelim           = 160
-    ,command_FieldId_strayfile         = 161
-    ,command_FieldId_capture           = 162
-    ,command_FieldId_expand            = 163
-    ,command_FieldId_ignoreQuote       = 164
-    ,command_FieldId_maxpacket         = 165
-    ,command_FieldId_db                = 166
-    ,command_FieldId_createdb          = 167
-    ,command_FieldId_str               = 168
-    ,command_FieldId_tocamelcase       = 169
-    ,command_FieldId_tolowerunder      = 170
-    ,command_FieldId_value             = 171
+    ,command_FieldId_undo              = 144
+    ,command_FieldId_targsrc           = 145
+    ,command_FieldId_name              = 146
+    ,command_FieldId_body              = 147
+    ,command_FieldId_func              = 148
+    ,command_FieldId_nextfile          = 149
+    ,command_FieldId_other             = 150
+    ,command_FieldId_updateproto       = 151
+    ,command_FieldId_listfunc          = 152
+    ,command_FieldId_iffy              = 153
+    ,command_FieldId_gen               = 154
+    ,command_FieldId_showloc           = 155
+    ,command_FieldId_showstatic        = 156
+    ,command_FieldId_showsortkey       = 157
+    ,command_FieldId_sortname          = 158
+    ,command_FieldId_update_authors    = 159
+    ,command_FieldId_indent            = 160
+    ,command_FieldId_linelim           = 161
+    ,command_FieldId_strayfile         = 162
+    ,command_FieldId_capture           = 163
+    ,command_FieldId_expand            = 164
+    ,command_FieldId_ignoreQuote       = 165
+    ,command_FieldId_maxpacket         = 166
+    ,command_FieldId_db                = 167
+    ,command_FieldId_createdb          = 168
+    ,command_FieldId_str               = 169
+    ,command_FieldId_tocamelcase       = 170
+    ,command_FieldId_tolowerunder      = 171
+    ,command_FieldId_value             = 172
 };
 
-enum { command_FieldIdEnum_N = 172 };
+enum { command_FieldIdEnum_N = 173 };
 
 namespace command { struct FieldId; }
 namespace command { struct Protocol; }
@@ -1475,6 +1476,7 @@ struct orgfile { // command.orgfile
     algo::cstring    tgtdir;           //   "~/image"  Destination directory
     bool             commit;           //   false  Apply changes
     bool             bydate;           //   true  Use tgtdir/YYYY-mm-dd/ directory
+    bool             undo;             //   false  Read previous orgfile output, undoing movement
     orgfile();
 };
 
