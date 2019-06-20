@@ -22,6 +22,39 @@
 
 // -----------------------------------------------------------------------------
 
+static bool TimeStruct_Read(TimeStruct &ts, strptr str, strptr fmt) {
+    StringIter iter(str);
+    return algo::TimeStruct_Read(ts,iter,fmt);
+}
+
+// -----------------------------------------------------------------------------
+
+static bool ReadParentDirTimestamp(strptr path, TimeStruct &ts) {
+    bool ret=false;
+    tempstr parentdir(Pathcomp(path,"/RL/RR"));
+    if (TimeStruct_Read(ts, parentdir, "%Y_%m_%d")) {// another one
+        ret=true;
+    } else if (TimeStruct_Read(ts, parentdir, "%Y-%m-%d")) {// another one
+        ret=true;
+    }
+    return ret;
+}
+
+// -----------------------------------------------------------------------------
+
+static bool ReadFilenameTimestamp(strptr path, TimeStruct &ts) {
+    bool ret=false;
+    tempstr name(algo::StripDirName(path));
+    if (TimeStruct_Read(ts, name, "PSX_%Y%m%d_")) {// photoshop express format
+        ret=true;
+    } else if (TimeStruct_Read(ts, name, "signal-%Y-%m-%d-")) {// signal app format
+        ret=true;
+    } 
+    return ret;
+}
+
+// -----------------------------------------------------------------------------
+
 // Attempt to determine a photograph's year-month-date from
 // its pathname.
 // Photos are often stored in directories that look like
@@ -29,21 +62,23 @@
 // Or
 //   x/2008-02-03/IMG12343.CRW
 // In this case, extract 2008,02,03 as the date.
+// Also check if the filename itself contains the timestamp, such as
+// PSX_YYYYmmdd_hhmmss.jpg
+//
 // If this heuristic doesn't work, use files's modification time.
 // (important -- not the creation timestamp; file may have been moved; this
 //   changes creation timestamp but keeps the modification timestamp)
-static bool GetYMD(strptr filename, cstring &year, cstring &month, cstring &day) {
+static bool GetYMD(strptr path, cstring &year, cstring &month, cstring &day) {
     bool ret=false;
-    tempstr parentdir(Pathcomp(filename,"/RL/RR"));
     TimeStruct ts;
-    StringIter iter(parentdir);
-    if (TimeStruct_Read(ts, iter, "%Y_%m_%d")) {
+    if (ReadParentDirTimestamp(path, ts)) {
         ret=true;
-    } else if (TimeStruct_Read(ts, iter, "%Y-%m-%d")) {
+    } else if (ReadFilenameTimestamp(path, ts)) {
         ret=true;
-    } else {
+    }
+    if (!ret) {// go by the modification date (creation date is unreliable)
         struct stat st;
-        ret=stat(Zeroterm(tempstr(filename)),&st)==0;
+        ret=stat(Zeroterm(tempstr(path)),&st)==0;
         UnixTime mtime(st.st_mtime);
         ts=algo::GetLocalTimeStruct(mtime);
     }
