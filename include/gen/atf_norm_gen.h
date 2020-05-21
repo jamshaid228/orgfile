@@ -802,6 +802,8 @@ void                 normcheck_readme();
 // User-implemented function from gstatic:atf_norm.FDb.normcheck
 void                 normcheck_unit();
 // User-implemented function from gstatic:atf_norm.FDb.normcheck
+void                 normcheck_orgfile();
+// User-implemented function from gstatic:atf_norm.FDb.normcheck
 void                 normcheck_copyright();
 // User-implemented function from gstatic:atf_norm.FDb.normcheck
 void                 normcheck_iffy_src();

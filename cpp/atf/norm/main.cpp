@@ -158,6 +158,12 @@ void atf_norm::normcheck_acr_ed() {
 
 // -----------------------------------------------------------------------------
 
+void atf_norm::normcheck_orgfile() {
+    SysCmd("bin/test-orgfile",FailokQ(false));
+}
+
+// -----------------------------------------------------------------------------
+
 void atf_norm::Main() {
     algo_lib::DieWithParent();
 
