@@ -7,20 +7,20 @@ with `make`.
 
 If `-commit` is specified, the operation is performed. Otherwise, the description of intended
 operation is printed to stdout and no action occurs.
-With `-undo`, orgfile reads the output of a previous run (works only with `-move`, not with `-dedup`)
-and moves files back to original location. Note, this can still result in data loss because the original move
-operation is not a bijection.
 
-If `-move` is specified, then each incoming file is moved into directory
-specified by `-tgtdir`. 
+If `-move` is specified, then each incoming file is moved to directory specified by `-move`, if that
+argument ends with a /. Otherwise, the file is renamed.
 
+If the target file exists and has the same checksum, as determined by the checksum algorithm, the source file is deleted.
 If the target file exists, a suffix "-2", "-3", etc is appended 
 to the incoming file's basename (so, `a.txt` becomes `a-2.txt`).
-If the target file exists and has the same checksum, the move is allowed without rename.
 
-Optionally, the file can be moved into a subdirectory of tgtdir specified with `-subdir`.
-`-bydate` is an alias to `-subdir:%Y/%Y-%m-%d`. The file timestamp is determined 
-using three methods, in order:
+When moving, orgfile treats the target filename as an expression, where the following substitutions occur.
+First, $basename, $filename, $ext are replaced with corresponding path components of the original file.
+Second, orgfile determines a date associated with the file and replaces %Y, %b, %m and %d in the target pathname
+with the discovered date.
+
+The date is discovered using the following algorithm:
 - First, the parent directory of the file is checked for any pattern specified in table `dev.timefmt` marked `dirname:Y`.
 (For instance, `"%Y-%m-%d"`)
 - If this doesn't yield a timestamp, then the filename is checked for any pattern from `timefmt` table marked `dirname:N`.
@@ -29,17 +29,45 @@ Any number of patterns can be provided in the table. Default timefmts support ph
 Note, use of formatting specifiers other than `%Y,%m,%b,%d` for `-subdir` may
 yield zeros.
 
-If `-dedup` is specified, then any incoming file whose pathname matches `-dedup_pathregx` pattern (default %)
-is added to an in-memory database of file hashes. If the hash already exists, the incoming file is deleted.
+The parameter `-hash` specifies the command to use to compute file hashes. It is `sha1` by default, but can
+be the name of any command. The output of the command is filtered (removing spaces and everyhing before `=` sign),
+and the rest is taken to the a file checksum for the purposes of determining duplicates (this works both
+with `-move` and with `-dedup`)
+
+If `-dedup` is specified, then any incoming file is scanned for its hash.
+Any file whose pathname matches the pattern specified by `-dedup`, and the file is proven to be a duplicate,
+is deleted.
+
+### Reading Output As Input
+
+Orgfile can accept its own output as input. This is useful for inserting filters such as grep.
+Aside from filenames, orgfile input can contain tuples that start with orgfile.move and orgfile.dedup.
+For orgfile.move, orgfile either performs the raw filesystem move (with no evaluation or deduplication), or, with 
+`-undo`, moves the target file back to the source file.
+For orgfilededup, orgfile deletes the duplicate file. With `-undo -dedup`, orgfile does nothing
+since deletion cannot be undone.
+For some move operations, `-undo` will move files back to their original locations.
 
 ## Examples
 
 ### Find files with identical contents (but don't do anything with them)
+```
 find . | orgfile -dedup
+```
+
+### Same as above but with an additional filter
+```
+find . | orgfile -dedup | grep <blah> | orgfile -commit
+```
 
 ### Delete files in secondary backup that already exist in primary backup
-find backup backup2 -type f | orgfile -dedup -dedup_pathregx "backup2/%" -commit
+```
+find backup backup2 -type f | orgfile -dedup:"backup2/%" -commit
+```
 
 ### Organize images by year and day
-find . -name "*.jpg" | orgfile -tgtdir image -bydate -commit
+```
+find . -name "*.jpg" | orgfile -move:image/%Y/%Y-%m-%d/ -commit
+```
+
 

@@ -43,7 +43,7 @@ namespace orgfile { // update-hdr
     // Read filenames from STDIN.
     // For each file, compute its file hash.
     // Delete file file if it's a duplicate (and -commit was specified)
-    void DedupFiles();
+    void DedupFile(strptr pathname);
 
     // Move file SRC to TGTFNAME.
     // If destination file exists, it is pointed to by TGT.
@@ -55,11 +55,8 @@ namespace orgfile { // update-hdr
     // Create new directory structure as appropriate.
     // Move the file into place if there was no conflict, or if the file content
     // hash exactly matches
-    void MoveFiles();
-
-    // No hashes are created during this operation.
-    // Just read orgfile.file records on stdin and move files back
-    // from TGTFILE -> PATHNAME
-    void Undo();
+    void MoveFile(strptr pathname);
+    bool RawMove(strptr line);
+    bool RawDedup(strptr line);
     void Main();
 }

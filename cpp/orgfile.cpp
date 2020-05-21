@@ -63,6 +63,19 @@ static bool GetTimestamp(strptr path, TimeStruct &ts) {
 
 // -----------------------------------------------------------------------------
 
+// sha1 returns
+// SHA1 (.lesshst) = a11ef917ac87065eb0864bc86548d3a1f27e2bca
+// sha1sum returns
+// 1024f5693cc1a56e2f870385dab217829a875b41  README.md
+// This function accepts both formats
+static tempstr TrimHash(strptr in) {
+    tempstr ret(Trimmed(Pathcomp(in,"=RR")));
+    tempstr ret2(Trimmed(Pathcomp(ret," LL")));
+    return ret2;
+}
+
+// -----------------------------------------------------------------------------
+
 // Access filename entry for file FNAME.
 // Also compute file's hash.
 // filename->p_filehash fetches the file hash entry.
@@ -72,11 +85,11 @@ orgfile::FFilename *orgfile::AccessFilename(strptr fname) {
     if (!filename) {
         filename = &filename_Alloc();
         tempstr cmd;
-        cmd << "sha1";
-        cmd << " < ";
+        cmd << _db.cmdline.hash;
+        cmd << " ";
         strptr_PrintBash(fname,cmd);
         filename->filename = fname;
-        filename->filehash = SysEval(cmd,FailokQ(true),1024);
+        filename->filehash = TrimHash(SysEval(cmd,FailokQ(true),1024));
         // cascade create filehash
         ind_filehash_GetOrCreate(filename->filehash);
         vrfy(filename_XrefMaybe(*filename),algo_lib::_db.errtext);
@@ -88,14 +101,18 @@ orgfile::FFilename *orgfile::AccessFilename(strptr fname) {
 
 // Determine new filename for FNAME.
 tempstr orgfile::GetTgtFname(strptr pathname) {
-    tempstr subdir;
-    TimeStruct ts;
-    if (GetTimestamp(pathname,ts)) {
-        TimeStruct_Print(ts, subdir, _db.cmdline.subdir);
+    tempstr pattern(_db.cmdline.move);
+    if (EndsWithQ(pattern,"/")) {
+        pattern << StripDirName(pathname);
     }
-    tempstr tgtdir = DirFileJoin(_db.cmdline.tgtdir,subdir);
-    tempstr filename(StripDirName(pathname));
-    return DirFileJoin(tgtdir,filename);
+    Replace(pattern,"$filename",StripDirName(pathname));
+    Replace(pattern,"$ext",GetFileExt(pathname));
+    Replace(pattern,"$basename",StripExt(StripDirName(pathname)));
+    TimeStruct ts;
+    GetTimestamp(pathname,ts);
+    tempstr tgtfname;
+    TimeStruct_Print(ts, tgtfname, pattern);
+    return tgtfname;
 }
 
 // -----------------------------------------------------------------------------
@@ -103,23 +120,22 @@ tempstr orgfile::GetTgtFname(strptr pathname) {
 // Read filenames from STDIN.
 // For each file, compute its file hash.
 // Delete file file if it's a duplicate (and -commit was specified)
-void orgfile::DedupFiles() {
-    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) if (FileQ(pathname)) {
-        orgfile::FFilename *srcfilename = AccessFilename(pathname);
-        if (Regx_Match(_db.cmdline.dedup_pathregx, pathname)) {
-            if (c_filename_N(*srcfilename->p_filehash) > 1) {// can dedup?
-                prlog("orgfile.dedup"
-                      <<Keyval("original",c_filename_Find(*srcfilename->p_filehash,0)->filename)
-                      <<Keyval("duplicate",pathname)
-                      <<Keyval("comment","contents are identical (based ond hash)"));
-                if (_db.cmdline.commit) {// do dedup
-                    if (DeleteFile(srcfilename->filename)) {
-                        filename_Delete(*srcfilename);
-                    }
+void orgfile::DedupFile(strptr pathname) {
+    orgfile::FFilename *srcfilename = AccessFilename(pathname);
+    if (Regx_Match(_db.cmdline.dedup, pathname)) {
+        if (c_filename_N(*srcfilename->p_filehash) > 1) {// can dedup?
+            orgfile::dedup dedup;
+            dedup.original = c_filename_Find(*srcfilename->p_filehash,0)->filename;
+            dedup.duplicate = pathname;
+            dedup.comment = "contents are identical (based on hash)";
+            prlog(dedup);
+            if (orgfile::_db.cmdline.commit) {// do dedup
+                if (DeleteFile(srcfilename->filename)) {
+                    filename_Delete(*srcfilename);
                 }
             }
         }
-    }ind_end;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -177,88 +193,97 @@ static tempstr MakeUnique(strptr fname) {
 // Create new directory structure as appropriate.
 // Move the file into place if there was no conflict, or if the file content
 //   hash exactly matches
-void orgfile::MoveFiles() {
-    ind_beg(algo::FileLine_curs,pathname,algo::Fildes(0)) if (FileQ(pathname)) {
-        bool canmove=false;
-        orgfile::file action;
-        action.pathname=pathname;
-        if (FileQ(pathname)) {
-            action.tgtfile=GetTgtFname(pathname);
+void orgfile::MoveFile(strptr pathname) {
+    bool canmove=false;
+    orgfile::move move;
+    move.pathname=pathname;
+    if (FileQ(pathname)) {
+        move.tgtfile=GetTgtFname(pathname);
+    } else {
+        move.comment = "file doesn't exist";
+    }
+    orgfile::FFilename *src = AccessFilename(pathname);
+    orgfile::FFilename *tgt = NULL;
+    if (move.tgtfile != "" && move.tgtfile != pathname) {
+        if (!FileQ(move.tgtfile)) {
+            canmove = true;
+            move.comment = "move file";
         } else {
-            action.comment = "file doesn't exist";
-        }
-        orgfile::FFilename *src = AccessFilename(pathname);
-        orgfile::FFilename *tgt = NULL;
-        if (action.tgtfile != "" && action.tgtfile != pathname) {
-            if (!FileQ(action.tgtfile)) {
-                canmove = true;
-                action.comment = "move file";
+            // only if it's known to exist
+            tgt = AccessFilename(move.tgtfile);
+            canmove = src->filehash == tgt->filehash;
+            if (canmove) {
+                move.comment = "move file (proven duplicate)";
             } else {
-                // only if it's known to exist
-                tgt = AccessFilename(action.tgtfile);
-                canmove = src->filehash == tgt->filehash;
-                if (canmove) {
-                    action.comment = "move file (proven duplicate)";
-                } else {
-                    action.comment = "move file (renaming for uniqueness)";
-                    action.tgtfile = MakeUnique(action.tgtfile);
-                    // how could this possibly return anything except NULL?
-                    tgt = ind_filename_Find(action.tgtfile);
-                    canmove = true;
-                }
-            }
-            prlog(action);
-            if (canmove && _db.cmdline.commit) {// do move
-                MoveFile(src,tgt,action.tgtfile);
+                move.comment = "move file (renaming for uniqueness)";
+                move.tgtfile = MakeUnique(move.tgtfile);
+                // how could this possibly return anything except NULL?
+                tgt = ind_filename_Find(move.tgtfile);
+                canmove = true;
             }
         }
-    }ind_end;
+        prlog(move);
+        if (canmove && _db.cmdline.commit) {// do move
+            MoveFile(src,tgt,move.tgtfile);
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
 
-// No hashes are created during this operation.
-// Just read orgfile.file records on stdin and move files back
-// from TGTFILE -> PATHNAME
-void orgfile::Undo() {
-    ind_beg(algo::FileLine_curs,line,algo::Fildes(0)) {
-        orgfile::file action;
-        if (file_ReadStrptrMaybe(action,line)) {
-            TSwap(action.pathname, action.tgtfile);
-            bool canmove=false;
-            if (FileQ(action.pathname)) {// source
-                action.comment = "move file back";
-                canmove=true;
-            } else {
-                action.comment = "original not found";
-            }
-            prlog(action);
-            if (canmove && _db.cmdline.commit) {// do move
-                SystemMv(action.pathname, action.tgtfile);
-            }
+bool orgfile::RawMove(strptr line) {
+    bool ret=false;
+    orgfile::move move;
+    if (move_ReadStrptrMaybe(move,line)) {
+        ret = true;
+        bool canmove = false;
+        if (_db.cmdline.undo) {
+            TSwap(move.pathname, move.tgtfile);
         }
-    }ind_end;
+        if (FileQ(move.pathname)) {// source
+            move.comment = "move file";
+            canmove=true;
+        } else {
+            move.comment = "original not found";
+        }
+        prlog(move);
+        if (canmove && _db.cmdline.commit) {// do move
+            SystemMv(move.pathname, move.tgtfile);
+        }
+    }
+    return ret;
+}
+
+// -----------------------------------------------------------------------------
+
+bool orgfile::RawDedup(strptr line) {
+    bool ret = false;
+    orgfile::dedup dedup;
+    if (dedup_ReadStrptrMaybe(dedup,line)) {
+        ret = true;
+        prlog(dedup);
+        if (_db.cmdline.commit && !_db.cmdline.undo) {
+            DeleteFile(dedup.duplicate);
+        }
+    }
+    return ret;
 }
 
 // -----------------------------------------------------------------------------
 
 void orgfile::Main() {
-    if (_db.cmdline.bydate) {
-        _db.cmdline.subdir = "%Y/%Y-%m-%d";
+    if (DirectoryQ(_db.cmdline.move) && !EndsWithQ(_db.cmdline.move,"/")) {
+        _db.cmdline.move << "/";
     }
-    vrfy(!_db.cmdline.move || DirectoryQ(_db.cmdline.tgtdir),
-         tempstr()<<"orgfile.baddir"
-         <<Keyval("tgtdir",_db.cmdline.tgtdir)
-         <<Keyval("comment", "directory doesn't seem to exist"));
-
-    if (_db.cmdline.undo) {
-        Undo();
-    } else if (_db.cmdline.move) {
-        MoveFiles();
-    } else if (_db.cmdline.dedup) {
-        DedupFiles();
-    } else {
-        prlog("please specify a command");
-        algo_lib::_db.exit_code=1;
-    }
+    ind_beg(algo::FileLine_curs,line,algo::Fildes(0)) {
+        if (FileQ(line)) {
+            if (_db.cmdline.move != "") {
+                MoveFile(line);
+            } else if (_db.cmdline.dedup.expr != "") {
+                DedupFile(line);
+            }
+        } else {
+            RawMove(line) || RawDedup(line);
+        }
+    }ind_end;
 }

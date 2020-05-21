@@ -15,14 +15,16 @@
 
 // --- orgfile_FieldIdEnum
 
-enum orgfile_FieldIdEnum {           // orgfile.FieldId.value
-     orgfile_FieldId_pathname   = 0
-    ,orgfile_FieldId_tgtfile    = 1
-    ,orgfile_FieldId_comment    = 2
-    ,orgfile_FieldId_value      = 3
+enum orgfile_FieldIdEnum {            // orgfile.FieldId.value
+     orgfile_FieldId_original    = 0
+    ,orgfile_FieldId_duplicate   = 1
+    ,orgfile_FieldId_comment     = 2
+    ,orgfile_FieldId_pathname    = 3
+    ,orgfile_FieldId_tgtfile     = 4
+    ,orgfile_FieldId_value       = 5
 };
 
-enum { orgfile_FieldIdEnum_N = 4 };
+enum { orgfile_FieldIdEnum_N = 6 };
 
 
 // --- orgfile_TableIdEnum
@@ -41,7 +43,8 @@ namespace orgfile { struct FFilename; }
 namespace orgfile { struct FTimefmt; }
 namespace orgfile { struct FieldId; }
 namespace orgfile { struct TableId; }
-namespace orgfile { struct file; }
+namespace orgfile { struct dedup; }
+namespace orgfile { struct move; }
 namespace orgfile { struct _db_ind_filename_curs; }
 namespace orgfile { struct _db_filehash_curs; }
 namespace orgfile { struct _db_ind_filehash_curs; }
@@ -408,20 +411,35 @@ void                 TableId_Init(orgfile::TableId& parent);
 // print string representation of orgfile::TableId to string LHS, no header -- cprint:orgfile.TableId.String
 void                 TableId_Print(orgfile::TableId & row, algo::cstring &str) __attribute__((nothrow));
 
-// --- orgfile.file
-struct file { // orgfile.file
+// --- orgfile.dedup
+struct dedup { // orgfile.dedup
+    algo::cstring   original;    //
+    algo::cstring   duplicate;   //
+    algo::cstring   comment;     //
+    dedup();
+};
+
+bool                 dedup_ReadFieldMaybe(orgfile::dedup &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
+// Read fields of orgfile::dedup from an ascii string.
+// The format of the string is an ssim Tuple
+bool                 dedup_ReadStrptrMaybe(orgfile::dedup &parent, algo::strptr in_str);
+// print string representation of orgfile::dedup to string LHS, no header -- cprint:orgfile.dedup.String
+void                 dedup_Print(orgfile::dedup & row, algo::cstring &str) __attribute__((nothrow));
+
+// --- orgfile.move
+struct move { // orgfile.move
     algo::cstring   pathname;   //
     algo::cstring   tgtfile;    //
     algo::cstring   comment;    //
-    file();
+    move();
 };
 
-bool                 file_ReadFieldMaybe(orgfile::file &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
-// Read fields of orgfile::file from an ascii string.
+bool                 move_ReadFieldMaybe(orgfile::move &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
+// Read fields of orgfile::move from an ascii string.
 // The format of the string is an ssim Tuple
-bool                 file_ReadStrptrMaybe(orgfile::file &parent, algo::strptr in_str);
-// print string representation of orgfile::file to string LHS, no header -- cprint:orgfile.file.String
-void                 file_Print(orgfile::file & row, algo::cstring &str) __attribute__((nothrow));
+bool                 move_ReadStrptrMaybe(orgfile::move &parent, algo::strptr in_str);
+// print string representation of orgfile::move to string LHS, no header -- cprint:orgfile.move.String
+void                 move_Print(orgfile::move & row, algo::cstring &str) __attribute__((nothrow));
 
 struct _db_filehash_curs {// cursor
     typedef orgfile::FFilehash ChildType;
@@ -453,5 +471,6 @@ namespace algo {
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::trace &row);// cfmt:orgfile.trace.String
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::FieldId &row);// cfmt:orgfile.FieldId.String
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::TableId &row);// cfmt:orgfile.TableId.String
-inline algo::cstring &operator <<(algo::cstring &str, const orgfile::file &row);// cfmt:orgfile.file.String
+inline algo::cstring &operator <<(algo::cstring &str, const orgfile::dedup &row);// cfmt:orgfile.dedup.String
+inline algo::cstring &operator <<(algo::cstring &str, const orgfile::move &row);// cfmt:orgfile.move.String
 }

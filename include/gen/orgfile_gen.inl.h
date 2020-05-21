@@ -346,7 +346,10 @@ inline orgfile::TableId::operator orgfile_TableIdEnum () const {
 inline void orgfile::TableId_Init(orgfile::TableId& parent) {
     parent.value = i32(-1);
 }
-inline orgfile::file::file() {
+inline orgfile::dedup::dedup() {
+}
+
+inline orgfile::move::move() {
 }
 
 
@@ -365,7 +368,12 @@ inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::Table
     return str;
 }
 
-inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::file &row) {// cfmt:orgfile.file.String
-    orgfile::file_Print(const_cast<orgfile::file&>(row), str);
+inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::dedup &row) {// cfmt:orgfile.dedup.String
+    orgfile::dedup_Print(const_cast<orgfile::dedup&>(row), str);
+    return str;
+}
+
+inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::move &row) {// cfmt:orgfile.move.String
+    orgfile::move_Print(const_cast<orgfile::move&>(row), str);
     return str;
 }

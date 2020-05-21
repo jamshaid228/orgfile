@@ -30,33 +30,27 @@ orgfile::FDb    orgfile::_db;     // dependency found via dev.targdep
 namespace orgfile {
 const char *orgfile_help =
 "Usage: orgfile [options]\n"
-"    -in              string  Input directory or filename, - for stdin. default: \"data\"\n"
-"    -move                    Read stdin, move files to tgtdir library. default: false\n"
-"    -dedup                   Read stdin, deduplicate files based on content. default: false\n"
-"    -dedup_pathregx  string  Only allow deleting files that match this regx. default: \"%\"\n"
-"    -tgtdir          string  Destination directory - must be specified\n"
-"    -commit                  Apply changes. default: false\n"
-"    -bydate                  Alias of -subdir:%Y/%Y-%m-%d/. default: false\n"
-"    -subdir          string  Subdirectory of tgtdir\n"
-"    -undo                    Read previous orgfile output, undoing movement. default: false\n"
-"    -verbose                 Enable verbose mode\n"
-"    -debug                   Enable debug mode\n"
-"    -version                 Show version information\n"
-"    -sig                     Print SHA1 signatures for dispatches\n"
-"    -help                    Print this screen and exit\n"
+"    -in       string  Input directory or filename, - for stdin. default: \"data\"\n"
+"    -move     string  Read stdin, rename files based on pattern\n"
+"    -dedup    string  Only allow deleting files that match this regx\n"
+"    -commit           Apply changes. default: false\n"
+"    -undo             Read previous orgfile output, undoing movement. default: false\n"
+"    -hash     string  Hash command to use for deduplication. default: \"sha1\"\n"
+"    -verbose          Enable verbose mode\n"
+"    -debug            Enable debug mode\n"
+"    -version          Show version information\n"
+"    -sig              Print SHA1 signatures for dispatches\n"
+"    -help             Print this screen and exit\n"
 ;
 
 
 const char *orgfile_syntax =
 "-in:string=\"data\"\n"
-" -move:flag\n"
-" -dedup:flag\n"
-" -dedup_pathregx:string=\"%\"\n"
-" -tgtdir:string=\n"
+" -move:string=\n"
+" -dedup:string=\n"
 " -commit:flag\n"
-" -bydate:flag\n"
-" -subdir:string=\n"
 " -undo:flag\n"
+" -hash:string=\"sha1\"\n"
 ;
 } // namespace orgfile
 namespace orgfile {
@@ -892,9 +886,11 @@ void orgfile::timefmt_CopyIn(orgfile::FTimefmt &row, dev::Timefmt &in) {
 const char* orgfile::value_ToCstr(const orgfile::FieldId& parent) {
     const char *ret = NULL;
     switch(value_GetEnum(parent)) {
+        case orgfile_FieldId_original      : ret = "original";  break;
+        case orgfile_FieldId_duplicate     : ret = "duplicate";  break;
+        case orgfile_FieldId_comment       : ret = "comment";  break;
         case orgfile_FieldId_pathname      : ret = "pathname";  break;
         case orgfile_FieldId_tgtfile       : ret = "tgtfile";  break;
-        case orgfile_FieldId_comment       : ret = "comment";  break;
         case orgfile_FieldId_value         : ret = "value";  break;
     }
     return ret;
@@ -940,8 +936,20 @@ bool orgfile::value_SetStrptrMaybe(orgfile::FieldId& parent, algo::strptr rhs) {
         }
         case 8: {
             switch (ReadLE64(rhs.elems)) {
+                case LE_STR8('o','r','i','g','i','n','a','l'): {
+                    value_SetEnum(parent,orgfile_FieldId_original); ret = true; break;
+                }
                 case LE_STR8('p','a','t','h','n','a','m','e'): {
                     value_SetEnum(parent,orgfile_FieldId_pathname); ret = true; break;
+                }
+            }
+            break;
+        }
+        case 9: {
+            switch (ReadLE64(rhs.elems)) {
+                case LE_STR8('d','u','p','l','i','c','a','t'): {
+                    if (memcmp(rhs.elems+8,"e",1)==0) { value_SetEnum(parent,orgfile_FieldId_duplicate); ret = true; break; }
+                    break;
                 }
             }
             break;
@@ -1063,8 +1071,53 @@ void orgfile::TableId_Print(orgfile::TableId & row, algo::cstring &str) {
     orgfile::value_Print(row, str);
 }
 
-// --- orgfile.file..ReadFieldMaybe
-bool orgfile::file_ReadFieldMaybe(orgfile::file &parent, algo::strptr field, algo::strptr strval) {
+// --- orgfile.dedup..ReadFieldMaybe
+bool orgfile::dedup_ReadFieldMaybe(orgfile::dedup &parent, algo::strptr field, algo::strptr strval) {
+    orgfile::FieldId field_id;
+    (void)value_SetStrptrMaybe(field_id,field);
+    bool retval = true; // default is no error
+    switch(field_id) {
+        case orgfile_FieldId_original: retval = algo::cstring_ReadStrptrMaybe(parent.original, strval); break;
+        case orgfile_FieldId_duplicate: retval = algo::cstring_ReadStrptrMaybe(parent.duplicate, strval); break;
+        case orgfile_FieldId_comment: retval = algo::cstring_ReadStrptrMaybe(parent.comment, strval); break;
+        default: break;
+    }
+    if (!retval) {
+        algo_lib::AppendErrtext("attr",field);
+    }
+    return retval;
+}
+
+// --- orgfile.dedup..ReadStrptrMaybe
+// Read fields of orgfile::dedup from an ascii string.
+// The format of the string is an ssim Tuple
+bool orgfile::dedup_ReadStrptrMaybe(orgfile::dedup &parent, algo::strptr in_str) {
+    bool retval = true;
+    retval = algo::StripTypeTag(in_str, "orgfile.dedup");
+    ind_beg(algo::Attr_curs, attr, in_str) {
+        retval = retval && dedup_ReadFieldMaybe(parent, attr.name, attr.value);
+    }ind_end;
+    return retval;
+}
+
+// --- orgfile.dedup..Print
+// print string representation of orgfile::dedup to string LHS, no header -- cprint:orgfile.dedup.String
+void orgfile::dedup_Print(orgfile::dedup & row, algo::cstring &str) {
+    algo::tempstr temp;
+    str << "orgfile.dedup";
+
+    algo::cstring_Print(row.original, temp);
+    PrintAttrSpaceReset(str,"original", temp);
+
+    algo::cstring_Print(row.duplicate, temp);
+    PrintAttrSpaceReset(str,"duplicate", temp);
+
+    algo::cstring_Print(row.comment, temp);
+    PrintAttrSpaceReset(str,"comment", temp);
+}
+
+// --- orgfile.move..ReadFieldMaybe
+bool orgfile::move_ReadFieldMaybe(orgfile::move &parent, algo::strptr field, algo::strptr strval) {
     orgfile::FieldId field_id;
     (void)value_SetStrptrMaybe(field_id,field);
     bool retval = true; // default is no error
@@ -1080,23 +1133,23 @@ bool orgfile::file_ReadFieldMaybe(orgfile::file &parent, algo::strptr field, alg
     return retval;
 }
 
-// --- orgfile.file..ReadStrptrMaybe
-// Read fields of orgfile::file from an ascii string.
+// --- orgfile.move..ReadStrptrMaybe
+// Read fields of orgfile::move from an ascii string.
 // The format of the string is an ssim Tuple
-bool orgfile::file_ReadStrptrMaybe(orgfile::file &parent, algo::strptr in_str) {
+bool orgfile::move_ReadStrptrMaybe(orgfile::move &parent, algo::strptr in_str) {
     bool retval = true;
-    retval = algo::StripTypeTag(in_str, "orgfile.file");
+    retval = algo::StripTypeTag(in_str, "orgfile.move");
     ind_beg(algo::Attr_curs, attr, in_str) {
-        retval = retval && file_ReadFieldMaybe(parent, attr.name, attr.value);
+        retval = retval && move_ReadFieldMaybe(parent, attr.name, attr.value);
     }ind_end;
     return retval;
 }
 
-// --- orgfile.file..Print
-// print string representation of orgfile::file to string LHS, no header -- cprint:orgfile.file.String
-void orgfile::file_Print(orgfile::file & row, algo::cstring &str) {
+// --- orgfile.move..Print
+// print string representation of orgfile::move to string LHS, no header -- cprint:orgfile.move.String
+void orgfile::move_Print(orgfile::move & row, algo::cstring &str) {
     algo::tempstr temp;
-    str << "orgfile.file";
+    str << "orgfile.move";
 
     algo::cstring_Print(row.pathname, temp);
     PrintAttrSpaceReset(str,"pathname", temp);
