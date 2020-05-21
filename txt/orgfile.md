@@ -1,7 +1,9 @@
 ## Orgfile: organize and deduplicate files by timestamp and by contents
 
 Orgfile reads a list of filenames from stdin and performs move and dedup operations with
-incoming files.
+incoming files. 
+This tool is based on openacr and can be merged into any clone of openacr, or compiled stand-alone
+with `make`.
 
 If `-commit` is specified, the operation is performed. Otherwise, the description of intended
 operation is printed to stdout and no action occurs.
