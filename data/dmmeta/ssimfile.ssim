@@ -24,6 +24,7 @@ dmmeta.ssimfile  ssimfile:dev.targdep  ctype:dev.Targdep
 dmmeta.ssimfile  ssimfile:dev.target  ctype:dev.Target
 dmmeta.ssimfile  ssimfile:dev.targsrc  ctype:dev.Targsrc
 dmmeta.ssimfile  ssimfile:dev.targsyslib  ctype:dev.Targsyslib
+dmmeta.ssimfile  ssimfile:dev.timefmt  ctype:dev.Timefmt
 dmmeta.ssimfile  ssimfile:dev.tool_opt  ctype:dev.ToolOpt
 dmmeta.ssimfile  ssimfile:dev.uname  ctype:dev.Uname
 dmmeta.ssimfile  ssimfile:dmmeta.anonfld  ctype:dmmeta.Anonfld

@@ -10,6 +10,7 @@
 #pragma once
 #include "include/gen/command_gen.h"
 #include "include/gen/algo_gen.h"
+#include "include/gen/dev_gen.h"
 //#pragma endinclude
 
 // --- orgfile_FieldIdEnum
@@ -23,15 +24,28 @@ enum orgfile_FieldIdEnum {           // orgfile.FieldId.value
 
 enum { orgfile_FieldIdEnum_N = 4 };
 
+
+// --- orgfile_TableIdEnum
+
+enum orgfile_TableIdEnum {               // orgfile.TableId.value
+     orgfile_TableId_dev_Timefmt   = 0   // dev.Timefmt -> orgfile.FTimefmt
+    ,orgfile_TableId_dev_timefmt   = 0   // dev.timefmt -> orgfile.FTimefmt
+};
+
+enum { orgfile_TableIdEnum_N = 2 };
+
 namespace orgfile { struct FFilehash; }
 namespace orgfile { struct trace; }
 namespace orgfile { struct FDb; }
 namespace orgfile { struct FFilename; }
+namespace orgfile { struct FTimefmt; }
 namespace orgfile { struct FieldId; }
+namespace orgfile { struct TableId; }
 namespace orgfile { struct file; }
 namespace orgfile { struct _db_ind_filename_curs; }
 namespace orgfile { struct _db_filehash_curs; }
 namespace orgfile { struct _db_ind_filehash_curs; }
+namespace orgfile { struct _db_timefmt_curs; }
 namespace orgfile { struct filehash_c_filename_curs; }
 namespace orgfile {
     typedef algo::Smallstr40 FFilehashPkey;
@@ -65,6 +79,8 @@ struct FDb { // orgfile.FDb
     orgfile::FFilehash**   ind_filehash_buckets_elems;   // pointer to bucket array
     i32                    ind_filehash_buckets_n;       // number of elements in bucket array
     i32                    ind_filehash_n;               // number of elements in the hash table
+    orgfile::FTimefmt*     timefmt_lary[32];             // level array
+    i32                    timefmt_n;                    // number of elements in array
     orgfile::trace         trace;                        //
 };
 
@@ -167,6 +183,34 @@ void                 ind_filehash_Remove(orgfile::FFilehash& row) __attribute__(
 // Reserve enough room in the hash for N more elements. Return success code.
 void                 ind_filehash_Reserve(int n) __attribute__((nothrow));
 
+// Allocate memory for new default row.
+// If out of memory, process is killed.
+orgfile::FTimefmt&   timefmt_Alloc() __attribute__((__warn_unused_result__, nothrow));
+// Allocate memory for new element. If out of memory, return NULL.
+orgfile::FTimefmt*   timefmt_AllocMaybe() __attribute__((__warn_unused_result__, nothrow));
+// Create new row from struct.
+// Return pointer to new element, or NULL if insertion failed (due to out-of-memory, duplicate key, etc)
+orgfile::FTimefmt*   timefmt_InsertMaybe(const dev::Timefmt &value) __attribute__((nothrow));
+// Allocate space for one element. If no memory available, return NULL.
+void*                timefmt_AllocMem() __attribute__((__warn_unused_result__, nothrow));
+// Return true if index is empty
+bool                 timefmt_EmptyQ() __attribute__((nothrow));
+// Look up row by row id. Return NULL if out of range
+orgfile::FTimefmt*   timefmt_Find(u64 t) __attribute__((__warn_unused_result__, nothrow));
+// Return pointer to last element of array, or NULL if array is empty
+orgfile::FTimefmt*   timefmt_Last() __attribute__((nothrow, pure));
+// Return number of items in the pool
+i32                  timefmt_N() __attribute__((__warn_unused_result__, nothrow, pure));
+// Remove all elements from Lary
+void                 timefmt_RemoveAll() __attribute__((nothrow));
+// Delete last element of array. Do nothing if array is empty.
+void                 timefmt_RemoveLast() __attribute__((nothrow));
+// 'quick' Access row by row id. No bounds checking.
+orgfile::FTimefmt&   timefmt_qFind(u64 t) __attribute__((nothrow));
+// Insert row into all appropriate indices. If error occurs, store error
+// in algo_lib::_db.errtext and return false. Caller must Delete or Unref such row.
+bool                 timefmt_XrefMaybe(orgfile::FTimefmt &row);
+
 // cursor points to valid item
 void                 _db_filehash_curs_Reset(_db_filehash_curs &curs, orgfile::FDb &parent);
 // cursor points to valid item
@@ -175,6 +219,14 @@ bool                 _db_filehash_curs_ValidQ(_db_filehash_curs &curs);
 void                 _db_filehash_curs_Next(_db_filehash_curs &curs);
 // item access
 orgfile::FFilehash&  _db_filehash_curs_Access(_db_filehash_curs &curs);
+// cursor points to valid item
+void                 _db_timefmt_curs_Reset(_db_timefmt_curs &curs, orgfile::FDb &parent);
+// cursor points to valid item
+bool                 _db_timefmt_curs_ValidQ(_db_timefmt_curs &curs);
+// proceed to next item
+void                 _db_timefmt_curs_Next(_db_timefmt_curs &curs);
+// item access
+orgfile::FTimefmt&   _db_timefmt_curs_Access(_db_timefmt_curs &curs);
 // Set all fields to initial values.
 void                 FDb_Init();
 void                 FDb_Uninit() __attribute__((nothrow));
@@ -258,6 +310,28 @@ private:
 void                 FFilename_Init(orgfile::FFilename& filename);
 void                 FFilename_Uninit(orgfile::FFilename& filename) __attribute__((nothrow));
 
+// --- orgfile.FTimefmt
+// create: orgfile.FDb.timefmt (Lary)
+struct FTimefmt { // orgfile.FTimefmt
+    algo::Smallstr100   timefmt;   //
+    bool                dirname;   //   false
+    algo::Comment       comment;   //
+private:
+    friend orgfile::FTimefmt&   timefmt_Alloc() __attribute__((__warn_unused_result__, nothrow));
+    friend orgfile::FTimefmt*   timefmt_AllocMaybe() __attribute__((__warn_unused_result__, nothrow));
+    friend void                 timefmt_RemoveAll() __attribute__((nothrow));
+    friend void                 timefmt_RemoveLast() __attribute__((nothrow));
+    FTimefmt();
+};
+
+// Copy fields out of row
+void                 timefmt_CopyOut(orgfile::FTimefmt &row, dev::Timefmt &out) __attribute__((nothrow));
+// Copy fields in to row
+void                 timefmt_CopyIn(orgfile::FTimefmt &row, dev::Timefmt &in) __attribute__((nothrow));
+
+// Set all fields to initial values.
+void                 FTimefmt_Init(orgfile::FTimefmt& timefmt);
+
 // --- orgfile.FieldId
 #pragma pack(push,1)
 struct FieldId { // orgfile.FieldId: Field read helper
@@ -297,6 +371,43 @@ void                 FieldId_Init(orgfile::FieldId& parent);
 // print string representation of orgfile::FieldId to string LHS, no header -- cprint:orgfile.FieldId.String
 void                 FieldId_Print(orgfile::FieldId & row, algo::cstring &str) __attribute__((nothrow));
 
+// --- orgfile.TableId
+struct TableId { // orgfile.TableId: Index of table in this namespace
+    i32   value;   //   -1  index of table
+    inline operator orgfile_TableIdEnum() const;
+    explicit TableId(i32                            in_value);
+    TableId(orgfile_TableIdEnum arg);
+    TableId();
+};
+
+// Get value of field as enum type
+orgfile_TableIdEnum  value_GetEnum(const orgfile::TableId& parent) __attribute__((nothrow));
+// Set value of field from enum type.
+void                 value_SetEnum(orgfile::TableId& parent, orgfile_TableIdEnum rhs) __attribute__((nothrow));
+// Convert numeric value of field to one of predefined string constants.
+// If string is found, return a static C string. Otherwise, return NULL.
+const char*          value_ToCstr(const orgfile::TableId& parent) __attribute__((nothrow));
+// Convert value to a string. First, attempt conversion to a known string.
+// If no string matches, print value as a numeric value.
+void                 value_Print(const orgfile::TableId& parent, algo::cstring &lhs) __attribute__((nothrow));
+// Convert string to field.
+// If the string is invalid, do not modify field and return false.
+// In case of success, return true
+bool                 value_SetStrptrMaybe(orgfile::TableId& parent, algo::strptr rhs) __attribute__((nothrow));
+// Convert string to field.
+// If the string is invalid, set numeric value to DFLT
+void                 value_SetStrptr(orgfile::TableId& parent, algo::strptr rhs, orgfile_TableIdEnum dflt) __attribute__((nothrow));
+// Convert string to field. Return success value
+bool                 value_ReadStrptrMaybe(orgfile::TableId& parent, algo::strptr rhs) __attribute__((nothrow));
+
+// Read fields of orgfile::TableId from an ascii string.
+// The format of the string is the format of the orgfile::TableId's only field
+bool                 TableId_ReadStrptrMaybe(orgfile::TableId &parent, algo::strptr in_str);
+// Set all fields to initial values.
+void                 TableId_Init(orgfile::TableId& parent);
+// print string representation of orgfile::TableId to string LHS, no header -- cprint:orgfile.TableId.String
+void                 TableId_Print(orgfile::TableId & row, algo::cstring &str) __attribute__((nothrow));
+
 // --- orgfile.file
 struct file { // orgfile.file
     algo::cstring   pathname;   //
@@ -320,6 +431,14 @@ struct _db_filehash_curs {// cursor
 };
 
 
+struct _db_timefmt_curs {// cursor
+    typedef orgfile::FTimefmt ChildType;
+    orgfile::FDb *parent;
+    i64 index;
+    _db_timefmt_curs(){ parent=NULL; index=0; }
+};
+
+
 struct filehash_c_filename_curs {// cursor
     typedef orgfile::FFilename ChildType;
     orgfile::FFilename** elems;
@@ -333,5 +452,6 @@ int                  main(int argc, char **argv);
 namespace algo {
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::trace &row);// cfmt:orgfile.trace.String
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::FieldId &row);// cfmt:orgfile.FieldId.String
+inline algo::cstring &operator <<(algo::cstring &str, const orgfile::TableId &row);// cfmt:orgfile.TableId.String
 inline algo::cstring &operator <<(algo::cstring &str, const orgfile::file &row);// cfmt:orgfile.file.String
 }

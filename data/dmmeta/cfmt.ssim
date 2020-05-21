@@ -347,6 +347,7 @@ dmmeta.cfmt  cfmt:dev.Targdep.String  printfmt:Tuple  read:Y  print:Y  sep:""  g
 dmmeta.cfmt  cfmt:dev.Target.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:dev.Targsrc.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:dev.Targsyslib.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
+dmmeta.cfmt  cfmt:dev.Timefmt.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:dev.ToolOpt.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:dev.Uname.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""
 dmmeta.cfmt  cfmt:dmmeta.Anonfld.String  printfmt:Tuple  read:Y  print:Y  sep:""  genop:Y  comment:""

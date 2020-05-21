@@ -164,6 +164,7 @@ const char *dmmeta_Ssimfile_ssimfile_dev_targdep           = "dev.targdep";
 const char *dmmeta_Ssimfile_ssimfile_dev_target            = "dev.target";
 const char *dmmeta_Ssimfile_ssimfile_dev_targsrc           = "dev.targsrc";
 const char *dmmeta_Ssimfile_ssimfile_dev_targsyslib        = "dev.targsyslib";
+const char *dmmeta_Ssimfile_ssimfile_dev_timefmt           = "dev.timefmt";
 const char *dmmeta_Ssimfile_ssimfile_dev_tool_opt          = "dev.tool_opt";
 const char *dmmeta_Ssimfile_ssimfile_dev_uname             = "dev.uname";
 const char *dmmeta_Ssimfile_ssimfile_dmmeta_anonfld        = "dmmeta.anonfld";

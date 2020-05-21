@@ -14,6 +14,8 @@
 #include "include/gen/command_gen.inl.h"
 #include "include/gen/algo_gen.h"
 #include "include/gen/algo_gen.inl.h"
+#include "include/gen/dev_gen.h"
+#include "include/gen/dev_gen.inl.h"
 #include "include/gen/lib_prot_gen.h"
 #include "include/gen/lib_prot_gen.inl.h"
 #include "include/gen/algo_lib_gen.h"
@@ -32,9 +34,10 @@ const char *orgfile_help =
 "    -move                    Read stdin, move files to tgtdir library. default: false\n"
 "    -dedup                   Read stdin, deduplicate files based on content. default: false\n"
 "    -dedup_pathregx  string  Only allow deleting files that match this regx. default: \"%\"\n"
-"    -tgtdir          string  Destination directory. default: \"~/image\"\n"
+"    -tgtdir          string  Destination directory - must be specified\n"
 "    -commit                  Apply changes. default: false\n"
-"    -bydate                  Use tgtdir/YYYY-mm-dd/ directory. default: true\n"
+"    -bydate                  Alias of -subdir:%Y/%Y-%m-%d/. default: false\n"
+"    -subdir          string  Subdirectory of tgtdir\n"
 "    -undo                    Read previous orgfile output, undoing movement. default: false\n"
 "    -verbose                 Enable verbose mode\n"
 "    -debug                   Enable debug mode\n"
@@ -49,15 +52,17 @@ const char *orgfile_syntax =
 " -move:flag\n"
 " -dedup:flag\n"
 " -dedup_pathregx:string=\"%\"\n"
-" -tgtdir:string=\"~/image\"\n"
+" -tgtdir:string=\n"
 " -commit:flag\n"
-" -bydate:flag=true\n"
+" -bydate:flag\n"
+" -subdir:string=\n"
 " -undo:flag\n"
 ;
 } // namespace orgfile
 namespace orgfile {
     // Load statically available data into tables, register tables and database.
     static void          InitReflection();
+    static bool          timefmt_InputMaybe(dev::Timefmt &elem) __attribute__((nothrow));
     // find trace by row id (used to implement reflection)
     static algo::ImrowPtr trace_RowidFind(int t) __attribute__((nothrow));
     // Function return 1
@@ -103,7 +108,7 @@ void orgfile::Step() {
 // --- orgfile.FDb._db.InitReflection
 // Load statically available data into tables, register tables and database.
 static void orgfile::InitReflection() {
-    algo_lib::imdb_InsertMaybe(algo::Imdb("orgfile", NULL, NULL, orgfile::MainLoop, NULL, algo::Comment()));
+    algo_lib::imdb_InsertMaybe(algo::Imdb("orgfile", orgfile::InsertStrptrMaybe, NULL, orgfile::MainLoop, NULL, algo::Comment()));
 
     algo::Imtable t_trace;
     t_trace.imtable         = "orgfile.trace";
@@ -117,6 +122,7 @@ static void orgfile::InitReflection() {
 
 
     // -- load signatures of existing dispatches --
+    algo_lib::InsertStrptrMaybe("dmmeta.Dispsigcheck  dispsig:'orgfile.Input'  signature:'dadfcf8accbcc44f5e5443f439ac4024afc89edf'");
 }
 
 // --- orgfile.FDb._db.StaticCheck
@@ -129,7 +135,22 @@ void orgfile::StaticCheck() {
 // Return value is true unless an error occurs. If return value is false, algo_lib::_db.errtext has error text
 bool orgfile::InsertStrptrMaybe(algo::strptr str) {
     bool retval = true;
-    (void)str;//only to avoid -Wunused-parameter
+    orgfile::TableId table_id(-1);
+    value_SetStrptrMaybe(table_id, algo::GetTypeTag(str));
+    switch (value_GetEnum(table_id)) {
+        case orgfile_TableId_dev_Timefmt: { // finput:orgfile.FDb.timefmt
+            dev::Timefmt elem;
+            retval = dev::Timefmt_ReadStrptrMaybe(elem, str);
+            retval = retval && timefmt_InputMaybe(elem);
+            break;
+        }
+        default:
+        retval = algo_lib::InsertStrptrMaybe(str);
+        break;
+    } //switch
+    if (!retval) {
+        algo_lib::NoteInsertErr(str); // increment error counter
+    }
     return retval;
 }
 
@@ -137,8 +158,11 @@ bool orgfile::InsertStrptrMaybe(algo::strptr str) {
 // Load all finputs from given directory.
 bool orgfile::LoadTuplesMaybe(algo::strptr root) {
     bool retval = true;
-    (void)root;//only to avoid -Wunused-parameter
-    return retval;
+    static const char *ssimfiles[] = {
+        "dev.timefmt"
+        , NULL};
+        retval = algo_lib::DoLoadTuples(root, orgfile::InsertStrptrMaybe, ssimfiles, true);
+        return retval;
 }
 
 // --- orgfile.FDb._db.LoadSsimfileMaybe
@@ -588,6 +612,104 @@ void orgfile::ind_filehash_Reserve(int n) {
     }
 }
 
+// --- orgfile.FDb.timefmt.Alloc
+// Allocate memory for new default row.
+// If out of memory, process is killed.
+orgfile::FTimefmt& orgfile::timefmt_Alloc() {
+    orgfile::FTimefmt* row = timefmt_AllocMaybe();
+    if (UNLIKELY(row == NULL)) {
+        FatalErrorExit("orgfile.out_of_mem  field:orgfile.FDb.timefmt  comment:'Alloc failed'");
+    }
+    return *row;
+}
+
+// --- orgfile.FDb.timefmt.AllocMaybe
+// Allocate memory for new element. If out of memory, return NULL.
+orgfile::FTimefmt* orgfile::timefmt_AllocMaybe() {
+    orgfile::FTimefmt *row = (orgfile::FTimefmt*)timefmt_AllocMem();
+    if (row) {
+        new (row) orgfile::FTimefmt; // call constructor
+    }
+    return row;
+}
+
+// --- orgfile.FDb.timefmt.InsertMaybe
+// Create new row from struct.
+// Return pointer to new element, or NULL if insertion failed (due to out-of-memory, duplicate key, etc)
+orgfile::FTimefmt* orgfile::timefmt_InsertMaybe(const dev::Timefmt &value) {
+    orgfile::FTimefmt *row = &timefmt_Alloc(); // if out of memory, process dies. if input error, return NULL.
+    timefmt_CopyIn(*row,const_cast<dev::Timefmt&>(value));
+    bool ok = timefmt_XrefMaybe(*row); // this may return false
+    if (!ok) {
+        timefmt_RemoveLast(); // delete offending row, any existing xrefs are cleared
+        row = NULL; // forget this ever happened
+    }
+    return row;
+}
+
+// --- orgfile.FDb.timefmt.AllocMem
+// Allocate space for one element. If no memory available, return NULL.
+void* orgfile::timefmt_AllocMem() {
+    u64 new_nelems     = _db.timefmt_n+1;
+    // compute level and index on level
+    u64 bsr   = algo::u64_BitScanReverse(new_nelems);
+    u64 base  = u64(1)<<bsr;
+    u64 index = new_nelems-base;
+    void *ret = NULL;
+    // if level doesn't exist yet, create it
+    orgfile::FTimefmt*  lev   = NULL;
+    if (bsr < 32) {
+        lev = _db.timefmt_lary[bsr];
+        if (!lev) {
+            lev=(orgfile::FTimefmt*)algo_lib::malloc_AllocMem(sizeof(orgfile::FTimefmt) * (u64(1)<<bsr));
+            _db.timefmt_lary[bsr] = lev;
+        }
+    }
+    // allocate element from this level
+    if (lev) {
+        _db.timefmt_n = new_nelems;
+        ret = lev + index;
+    }
+    return ret;
+}
+
+// --- orgfile.FDb.timefmt.RemoveAll
+// Remove all elements from Lary
+void orgfile::timefmt_RemoveAll() {
+    for (u64 n = _db.timefmt_n; n>0; ) {
+        n--;
+        timefmt_qFind(u64(n)).~FTimefmt(); // destroy last element
+        _db.timefmt_n = n;
+    }
+}
+
+// --- orgfile.FDb.timefmt.RemoveLast
+// Delete last element of array. Do nothing if array is empty.
+void orgfile::timefmt_RemoveLast() {
+    u64 n = _db.timefmt_n;
+    if (n > 0) {
+        n -= 1;
+        timefmt_qFind(u64(n)).~FTimefmt();
+        _db.timefmt_n = n;
+    }
+}
+
+// --- orgfile.FDb.timefmt.InputMaybe
+static bool orgfile::timefmt_InputMaybe(dev::Timefmt &elem) {
+    bool retval = true;
+    retval = timefmt_InsertMaybe(elem);
+    return retval;
+}
+
+// --- orgfile.FDb.timefmt.XrefMaybe
+// Insert row into all appropriate indices. If error occurs, store error
+// in algo_lib::_db.errtext and return false. Caller must Delete or Unref such row.
+bool orgfile::timefmt_XrefMaybe(orgfile::FTimefmt &row) {
+    bool retval = true;
+    (void)row;
+    return retval;
+}
+
 // --- orgfile.FDb.trace.RowidFind
 // find trace by row id (used to implement reflection)
 static algo::ImrowPtr orgfile::trace_RowidFind(int t) {
@@ -633,6 +755,17 @@ void orgfile::FDb_Init() {
         FatalErrorExit("out of memory"); // (orgfile.FDb.ind_filehash)
     }
     memset(_db.ind_filehash_buckets_elems, 0, sizeof(orgfile::FFilehash*)*_db.ind_filehash_buckets_n); // (orgfile.FDb.ind_filehash)
+    // initialize LAry timefmt (orgfile.FDb.timefmt)
+    _db.timefmt_n = 0;
+    memset(_db.timefmt_lary, 0, sizeof(_db.timefmt_lary)); // zero out all level pointers
+    orgfile::FTimefmt* timefmt_first = (orgfile::FTimefmt*)algo_lib::malloc_AllocMem(sizeof(orgfile::FTimefmt) * (u64(1)<<4));
+    if (!timefmt_first) {
+        FatalErrorExit("out of memory");
+    }
+    for (int i = 0; i < 4; i++) {
+        _db.timefmt_lary[i]  = timefmt_first;
+        timefmt_first    += 1ULL<<i;
+    }
 
     orgfile::InitReflection();
 }
@@ -640,6 +773,9 @@ void orgfile::FDb_Init() {
 // --- orgfile.FDb..Uninit
 void orgfile::FDb_Uninit() {
     orgfile::FDb &row = _db; (void)row;
+
+    // orgfile.FDb.timefmt.Uninit (Lary)  //
+    // skip destruction in global scope
 
     // orgfile.FDb.ind_filehash.Uninit (Thash)  //
     // skip destruction of ind_filehash in global scope
@@ -732,6 +868,22 @@ void orgfile::FFilename_Uninit(orgfile::FFilename& filename) {
     if (p_filehash)  {
         c_filename_Remove(*p_filehash, row);// remove filename from index c_filename
     }
+}
+
+// --- orgfile.FTimefmt.base.CopyOut
+// Copy fields out of row
+void orgfile::timefmt_CopyOut(orgfile::FTimefmt &row, dev::Timefmt &out) {
+    out.timefmt = row.timefmt;
+    out.dirname = row.dirname;
+    out.comment = row.comment;
+}
+
+// --- orgfile.FTimefmt.base.CopyIn
+// Copy fields in to row
+void orgfile::timefmt_CopyIn(orgfile::FTimefmt &row, dev::Timefmt &in) {
+    row.timefmt = in.timefmt;
+    row.dirname = in.dirname;
+    row.comment = in.comment;
 }
 
 // --- orgfile.FieldId.value.ToCstr
@@ -828,6 +980,86 @@ bool orgfile::FieldId_ReadStrptrMaybe(orgfile::FieldId &parent, algo::strptr in_
 // --- orgfile.FieldId..Print
 // print string representation of orgfile::FieldId to string LHS, no header -- cprint:orgfile.FieldId.String
 void orgfile::FieldId_Print(orgfile::FieldId & row, algo::cstring &str) {
+    orgfile::value_Print(row, str);
+}
+
+// --- orgfile.TableId.value.ToCstr
+// Convert numeric value of field to one of predefined string constants.
+// If string is found, return a static C string. Otherwise, return NULL.
+const char* orgfile::value_ToCstr(const orgfile::TableId& parent) {
+    const char *ret = NULL;
+    switch(value_GetEnum(parent)) {
+        case orgfile_TableId_dev_Timefmt   : ret = "dev.Timefmt";  break;
+    }
+    return ret;
+}
+
+// --- orgfile.TableId.value.Print
+// Convert value to a string. First, attempt conversion to a known string.
+// If no string matches, print value as a numeric value.
+void orgfile::value_Print(const orgfile::TableId& parent, algo::cstring &lhs) {
+    const char *strval = value_ToCstr(parent);
+    if (strval) {
+        lhs << strval;
+    } else {
+        lhs << parent.value;
+    }
+}
+
+// --- orgfile.TableId.value.SetStrptrMaybe
+// Convert string to field.
+// If the string is invalid, do not modify field and return false.
+// In case of success, return true
+bool orgfile::value_SetStrptrMaybe(orgfile::TableId& parent, algo::strptr rhs) {
+    bool ret = false;
+    switch (elems_N(rhs)) {
+        case 11: {
+            switch (ReadLE64(rhs.elems)) {
+                case LE_STR8('d','e','v','.','T','i','m','e'): {
+                    if (memcmp(rhs.elems+8,"fmt",3)==0) { value_SetEnum(parent,orgfile_TableId_dev_Timefmt); ret = true; break; }
+                    break;
+                }
+                case LE_STR8('d','e','v','.','t','i','m','e'): {
+                    if (memcmp(rhs.elems+8,"fmt",3)==0) { value_SetEnum(parent,orgfile_TableId_dev_timefmt); ret = true; break; }
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    return ret;
+}
+
+// --- orgfile.TableId.value.SetStrptr
+// Convert string to field.
+// If the string is invalid, set numeric value to DFLT
+void orgfile::value_SetStrptr(orgfile::TableId& parent, algo::strptr rhs, orgfile_TableIdEnum dflt) {
+    if (!value_SetStrptrMaybe(parent,rhs)) value_SetEnum(parent,dflt);
+}
+
+// --- orgfile.TableId.value.ReadStrptrMaybe
+// Convert string to field. Return success value
+bool orgfile::value_ReadStrptrMaybe(orgfile::TableId& parent, algo::strptr rhs) {
+    bool retval = false;
+    retval = value_SetStrptrMaybe(parent,rhs); // try symbol conversion
+    if (!retval) { // didn't work? try reading as underlying type
+        retval = i32_ReadStrptrMaybe(parent.value,rhs);
+    }
+    return retval;
+}
+
+// --- orgfile.TableId..ReadStrptrMaybe
+// Read fields of orgfile::TableId from an ascii string.
+// The format of the string is the format of the orgfile::TableId's only field
+bool orgfile::TableId_ReadStrptrMaybe(orgfile::TableId &parent, algo::strptr in_str) {
+    bool retval = true;
+    retval = retval && orgfile::value_ReadStrptrMaybe(parent, in_str);
+    return retval;
+}
+
+// --- orgfile.TableId..Print
+// print string representation of orgfile::TableId to string LHS, no header -- cprint:orgfile.TableId.String
+void orgfile::TableId_Print(orgfile::TableId & row, algo::cstring &str) {
     orgfile::value_Print(row, str);
 }
 

@@ -67,7 +67,7 @@ dev.gitfile  gitfile:bin/msloc.pl
 dev.gitfile  gitfile:bin/mysql2ssim
 dev.gitfile  gitfile:bin/nogen
 dev.gitfile  gitfile:bin/normalize
-dev.gitfile  gitfile:bin/orgphoto
+dev.gitfile  gitfile:bin/orgfile
 dev.gitfile  gitfile:bin/rebuild-amc
 dev.gitfile  gitfile:bin/select-bootstrap
 dev.gitfile  gitfile:bin/sloc.pl
@@ -79,6 +79,7 @@ dev.gitfile  gitfile:bin/ssim2csv
 dev.gitfile  gitfile:bin/ssim2mysql
 dev.gitfile  gitfile:bin/strconv
 dev.gitfile  gitfile:bin/targ-diff
+dev.gitfile  gitfile:bin/test-orgfile
 dev.gitfile  gitfile:bin/timestamps
 dev.gitfile  gitfile:bin/todo
 dev.gitfile  gitfile:bin/update-gitfile
@@ -366,6 +367,7 @@ dev.gitfile  gitfile:data/dev/targdep.ssim
 dev.gitfile  gitfile:data/dev/target.ssim
 dev.gitfile  gitfile:data/dev/targsrc.ssim
 dev.gitfile  gitfile:data/dev/targsyslib.ssim
+dev.gitfile  gitfile:data/dev/timefmt.ssim
 dev.gitfile  gitfile:data/dev/tool_opt.ssim
 dev.gitfile  gitfile:data/dev/uname.ssim
 dev.gitfile  gitfile:data/dmmeta/anonfld.ssim
@@ -592,7 +594,7 @@ dev.gitfile  gitfile:include/lib/lib_json.inl.h
 dev.gitfile  gitfile:include/lib/lib_mysql.h
 dev.gitfile  gitfile:include/lib_git.h
 dev.gitfile  gitfile:include/lib_sql.h
-dev.gitfile  gitfile:include/orgphoto.h
+dev.gitfile  gitfile:include/orgfile.h
 dev.gitfile  gitfile:include/sha.h
 dev.gitfile  gitfile:include/src_func.h
 dev.gitfile  gitfile:include/strconv.h
@@ -600,6 +602,10 @@ dev.gitfile  gitfile:include/sysincl.h
 dev.gitfile  gitfile:include/typedef.h
 dev.gitfile  gitfile:lock/.empty
 dev.gitfile  gitfile:temp/.empty
+dev.gitfile  gitfile:test/orgfile/PSX_20200101.txt
+dev.gitfile  gitfile:test/orgfile/a.txt
+dev.gitfile  gitfile:test/orgfile/b.txt
+dev.gitfile  gitfile:test/orgfile/c.txt
 dev.gitfile  gitfile:txt/about.md
 dev.gitfile  gitfile:txt/abt.md
 dev.gitfile  gitfile:txt/acr-commit-log.txt
@@ -612,6 +618,7 @@ dev.gitfile  gitfile:txt/coding-style.md
 dev.gitfile  gitfile:txt/directory-structure.md
 dev.gitfile  gitfile:txt/iohook.md
 dev.gitfile  gitfile:txt/mdbg.md
+dev.gitfile  gitfile:txt/orgfile.md
 dev.gitfile  gitfile:txt/script.md
 dev.gitfile  gitfile:txt/setup-and-installation.md
 dev.gitfile  gitfile:txt/sknf.md

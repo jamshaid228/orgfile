@@ -169,6 +169,7 @@ const char* command::value_ToCstr(const command::FieldId& parent) {
         case command_FieldId_tgtdir        : ret = "tgtdir";  break;
         case command_FieldId_commit        : ret = "commit";  break;
         case command_FieldId_bydate        : ret = "bydate";  break;
+        case command_FieldId_subdir        : ret = "subdir";  break;
         case command_FieldId_undo          : ret = "undo";  break;
         case command_FieldId_targsrc       : ret = "targsrc";  break;
         case command_FieldId_name          : ret = "name";  break;
@@ -544,6 +545,9 @@ bool command::value_SetStrptrMaybe(command::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR6('s','e','l','e','c','t'): {
                     value_SetEnum(parent,command_FieldId_select); ret = true; break;
+                }
+                case LE_STR6('s','u','b','d','i','r'): {
+                    value_SetEnum(parent,command_FieldId_subdir); ret = true; break;
                 }
                 case LE_STR6('s','u','b','s','e','t'): {
                     value_SetEnum(parent,command_FieldId_subset); ret = true; break;
@@ -6832,6 +6836,7 @@ bool command::orgfile_ReadFieldMaybe(command::orgfile &parent, algo::strptr fiel
         case command_FieldId_tgtdir: retval = algo::cstring_ReadStrptrMaybe(parent.tgtdir, strval); break;
         case command_FieldId_commit: retval = bool_ReadStrptrMaybe(parent.commit, strval); break;
         case command_FieldId_bydate: retval = bool_ReadStrptrMaybe(parent.bydate, strval); break;
+        case command_FieldId_subdir: retval = algo::cstring_ReadStrptrMaybe(parent.subdir, strval); break;
         case command_FieldId_undo: retval = bool_ReadStrptrMaybe(parent.undo, strval); break;
         default: break;
     }
@@ -6861,9 +6866,10 @@ void command::orgfile_Init(command::orgfile& parent) {
     parent.move = bool(false);
     parent.dedup = bool(false);
     Regx_ReadSql(parent.dedup_pathregx, "%", true);
-    parent.tgtdir = algo::strptr("~/image");
+    parent.tgtdir = algo::strptr("");
     parent.commit = bool(false);
-    parent.bydate = bool(true);
+    parent.bydate = bool(false);
+    parent.subdir = algo::strptr("");
     parent.undo = bool(false);
 }
 
@@ -6898,7 +6904,7 @@ void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
         str << " -dedup_pathregx:";
         strptr_PrintBash(temp,str);
     }
-    if (!(row.tgtdir == "~/image")) {
+    if (!(row.tgtdir == "")) {
         ch_RemoveAll(temp);
         cstring_Print(row.tgtdir, temp);
         str << " -tgtdir:";
@@ -6910,10 +6916,16 @@ void command::orgfile_PrintArgv(command::orgfile & row, algo::cstring &str) {
         str << " -commit:";
         strptr_PrintBash(temp,str);
     }
-    if (!(row.bydate == true)) {
+    if (!(row.bydate == false)) {
         ch_RemoveAll(temp);
         bool_Print(row.bydate, temp);
         str << " -bydate:";
+        strptr_PrintBash(temp,str);
+    }
+    if (!(row.subdir == "")) {
+        ch_RemoveAll(temp);
+        cstring_Print(row.subdir, temp);
+        str << " -subdir:";
         strptr_PrintBash(temp,str);
     }
     if (!(row.undo == false)) {
@@ -7025,7 +7037,7 @@ void command::orgfile_ExecX(command::orgfile_proc& parent) {
 // Call execv()
 // Call execv with specified parameters -- cprint:orgfile.Argv
 int command::orgfile_Execv(command::orgfile_proc& parent) {
-    char *argv[8+2]; // start of first arg (future pointer)
+    char *argv[9+2]; // start of first arg (future pointer)
     algo::tempstr temp;
     int n_argv=0;
     argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
@@ -7060,7 +7072,7 @@ int command::orgfile_Execv(command::orgfile_proc& parent) {
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
 
-    if (parent.cmd.tgtdir != "~/image") {
+    if (parent.cmd.tgtdir != "") {
         argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
         temp << "-tgtdir:";
         cstring_Print(parent.cmd.tgtdir, temp);
@@ -7074,10 +7086,17 @@ int command::orgfile_Execv(command::orgfile_proc& parent) {
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
 
-    if (parent.cmd.bydate != true) {
+    if (parent.cmd.bydate != false) {
         argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
         temp << "-bydate:";
         bool_Print(parent.cmd.bydate, temp);
+        ch_Alloc(temp) = 0;// NUL term for this arg
+    }
+
+    if (parent.cmd.subdir != "") {
+        argv[n_argv++] = (char*)(int_ptr)ch_N(temp);// future pointer
+        temp << "-subdir:";
+        cstring_Print(parent.cmd.subdir, temp);
         ch_Alloc(temp) = 0;// NUL term for this arg
     }
 
@@ -9284,8 +9303,9 @@ inline static void command::SizeCheck() {
     algo_assert(_offset_of(command::orgfile,tgtdir) == 120);
     algo_assert(_offset_of(command::orgfile,commit) == 136);
     algo_assert(_offset_of(command::orgfile,bydate) == 137);
-    algo_assert(_offset_of(command::orgfile,undo) == 138);
-    algo_assert(sizeof(command::orgfile) == 144);
+    algo_assert(_offset_of(command::orgfile,subdir) == 144);
+    algo_assert(_offset_of(command::orgfile,undo) == 160);
+    algo_assert(sizeof(command::orgfile) == 168);
     algo_assert(_offset_of(command::src_func,in) == 0);
     algo_assert(_offset_of(command::src_func,targsrc) == 16);
     algo_assert(_offset_of(command::src_func,name) == 112);

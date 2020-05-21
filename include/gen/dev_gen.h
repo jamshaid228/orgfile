@@ -99,12 +99,14 @@ enum dev_FieldIdEnum {                // dev.FieldId.value
     ,dev_FieldId_targsrc        = 48
     ,dev_FieldId_src            = 49
     ,dev_FieldId_targsyslib     = 50
-    ,dev_FieldId_tool_opt       = 51
-    ,dev_FieldId_opt            = 52
-    ,dev_FieldId_value          = 53
+    ,dev_FieldId_timefmt        = 51
+    ,dev_FieldId_dirname        = 52
+    ,dev_FieldId_tool_opt       = 53
+    ,dev_FieldId_opt            = 54
+    ,dev_FieldId_value          = 55
 };
 
-enum { dev_FieldIdEnum_N = 54 };
+enum { dev_FieldIdEnum_N = 56 };
 
 namespace dev { struct Arch; }
 namespace dev { struct Badline; }
@@ -127,6 +129,7 @@ namespace dev { struct Targdep; }
 namespace dev { struct Target; }
 namespace dev { struct Targsrc; }
 namespace dev { struct Targsyslib; }
+namespace dev { struct Timefmt; }
 namespace dev { struct ToolOpt; }
 namespace dev { struct Uname; }
 namespace dev {
@@ -590,6 +593,23 @@ bool                 Targsyslib_ReadStrptrMaybe(dev::Targsyslib &parent, algo::s
 // print string representation of dev::Targsyslib to string LHS, no header -- cprint:dev.Targsyslib.String
 void                 Targsyslib_Print(dev::Targsyslib & row, algo::cstring &str) __attribute__((nothrow));
 
+// --- dev.Timefmt
+struct Timefmt { // dev.Timefmt: Time formats supported by orgfile
+    algo::Smallstr100   timefmt;   //
+    bool                dirname;   //   false
+    algo::Comment       comment;   //
+    Timefmt();
+};
+
+bool                 Timefmt_ReadFieldMaybe(dev::Timefmt &parent, algo::strptr field, algo::strptr strval) __attribute__((nothrow));
+// Read fields of dev::Timefmt from an ascii string.
+// The format of the string is an ssim Tuple
+bool                 Timefmt_ReadStrptrMaybe(dev::Timefmt &parent, algo::strptr in_str);
+// Set all fields to initial values.
+void                 Timefmt_Init(dev::Timefmt& parent);
+// print string representation of dev::Timefmt to string LHS, no header -- cprint:dev.Timefmt.String
+void                 Timefmt_Print(dev::Timefmt & row, algo::cstring &str) __attribute__((nothrow));
+
 // --- dev.ToolOpt
 struct ToolOpt { // dev.ToolOpt
     algo::RspaceStr10   tool_opt;   //
@@ -653,6 +673,7 @@ inline algo::cstring &operator <<(algo::cstring &str, const dev::Targdep &row);/
 inline algo::cstring &operator <<(algo::cstring &str, const dev::Target &row);// cfmt:dev.Target.String
 inline algo::cstring &operator <<(algo::cstring &str, const dev::Targsrc &row);// cfmt:dev.Targsrc.String
 inline algo::cstring &operator <<(algo::cstring &str, const dev::Targsyslib &row);// cfmt:dev.Targsyslib.String
+inline algo::cstring &operator <<(algo::cstring &str, const dev::Timefmt &row);// cfmt:dev.Timefmt.String
 inline algo::cstring &operator <<(algo::cstring &str, const dev::ToolOpt &row);// cfmt:dev.ToolOpt.String
 inline algo::cstring &operator <<(algo::cstring &str, const dev::Uname &row);// cfmt:dev.Uname.String
 }

@@ -394,6 +394,8 @@ const char* dev::value_ToCstr(const dev::FieldId& parent) {
         case dev_FieldId_targsrc           : ret = "targsrc";  break;
         case dev_FieldId_src               : ret = "src";  break;
         case dev_FieldId_targsyslib        : ret = "targsyslib";  break;
+        case dev_FieldId_timefmt           : ret = "timefmt";  break;
+        case dev_FieldId_dirname           : ret = "dirname";  break;
         case dev_FieldId_tool_opt          : ret = "tool_opt";  break;
         case dev_FieldId_opt               : ret = "opt";  break;
         case dev_FieldId_value             : ret = "value";  break;
@@ -534,6 +536,9 @@ bool dev::value_SetStrptrMaybe(dev::FieldId& parent, algo::strptr rhs) {
                 case LE_STR7('c','o','m','p','v','e','r'): {
                     value_SetEnum(parent,dev_FieldId_compver); ret = true; break;
                 }
+                case LE_STR7('d','i','r','n','a','m','e'): {
+                    value_SetEnum(parent,dev_FieldId_dirname); ret = true; break;
+                }
                 case LE_STR7('e','x','e','c','k','e','y'): {
                     value_SetEnum(parent,dev_FieldId_execkey); ret = true; break;
                 }
@@ -563,6 +568,9 @@ bool dev::value_SetStrptrMaybe(dev::FieldId& parent, algo::strptr rhs) {
                 }
                 case LE_STR7('t','a','r','g','s','r','c'): {
                     value_SetEnum(parent,dev_FieldId_targsrc); ret = true; break;
+                }
+                case LE_STR7('t','i','m','e','f','m','t'): {
+                    value_SetEnum(parent,dev_FieldId_timefmt); ret = true; break;
                 }
             }
             break;
@@ -1537,6 +1545,51 @@ void dev::Targsyslib_Print(dev::Targsyslib & row, algo::cstring &str) {
 
     dev::uname_Print(row, temp);
     PrintAttrSpaceReset(str,"uname", temp);
+
+    algo::Comment_Print(row.comment, temp);
+    PrintAttrSpaceReset(str,"comment", temp);
+}
+
+// --- dev.Timefmt..ReadFieldMaybe
+bool dev::Timefmt_ReadFieldMaybe(dev::Timefmt &parent, algo::strptr field, algo::strptr strval) {
+    dev::FieldId field_id;
+    (void)value_SetStrptrMaybe(field_id,field);
+    bool retval = true; // default is no error
+    switch(field_id) {
+        case dev_FieldId_timefmt: retval = algo::Smallstr100_ReadStrptrMaybe(parent.timefmt, strval); break;
+        case dev_FieldId_dirname: retval = bool_ReadStrptrMaybe(parent.dirname, strval); break;
+        case dev_FieldId_comment: retval = algo::Comment_ReadStrptrMaybe(parent.comment, strval); break;
+        default: break;
+    }
+    if (!retval) {
+        algo_lib::AppendErrtext("attr",field);
+    }
+    return retval;
+}
+
+// --- dev.Timefmt..ReadStrptrMaybe
+// Read fields of dev::Timefmt from an ascii string.
+// The format of the string is an ssim Tuple
+bool dev::Timefmt_ReadStrptrMaybe(dev::Timefmt &parent, algo::strptr in_str) {
+    bool retval = true;
+    retval = algo::StripTypeTag(in_str, "dev.timefmt") || algo::StripTypeTag(in_str, "dev.Timefmt");
+    ind_beg(algo::Attr_curs, attr, in_str) {
+        retval = retval && Timefmt_ReadFieldMaybe(parent, attr.name, attr.value);
+    }ind_end;
+    return retval;
+}
+
+// --- dev.Timefmt..Print
+// print string representation of dev::Timefmt to string LHS, no header -- cprint:dev.Timefmt.String
+void dev::Timefmt_Print(dev::Timefmt & row, algo::cstring &str) {
+    algo::tempstr temp;
+    str << "dev.timefmt";
+
+    algo::Smallstr100_Print(row.timefmt, temp);
+    PrintAttrSpaceReset(str,"timefmt", temp);
+
+    bool_Print(row.dirname, temp);
+    PrintAttrSpaceReset(str,"dirname", temp);
 
     algo::Comment_Print(row.comment, temp);
     PrintAttrSpaceReset(str,"comment", temp);

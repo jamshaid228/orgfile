@@ -10,6 +10,7 @@
 #pragma once
 #include "include/gen/command_gen.inl.h"
 #include "include/gen/algo_gen.inl.h"
+#include "include/gen/dev_gen.inl.h"
 //#pragma endinclude
 inline orgfile::trace::trace() {
 }
@@ -81,6 +82,48 @@ inline i32 orgfile::ind_filehash_N() {
     return _db.ind_filehash_n;
 }
 
+// --- orgfile.FDb.timefmt.EmptyQ
+// Return true if index is empty
+inline bool orgfile::timefmt_EmptyQ() {
+    return _db.timefmt_n == 0;
+}
+
+// --- orgfile.FDb.timefmt.Find
+// Look up row by row id. Return NULL if out of range
+inline orgfile::FTimefmt* orgfile::timefmt_Find(u64 t) {
+    u64 x = t + 1;
+    u64 bsr   = algo::u64_BitScanReverse(x);
+    u64 base  = u64(1)<<bsr;
+    u64 index = x-base;
+    orgfile::FTimefmt *retval = NULL;
+    if (LIKELY(x <= u64(_db.timefmt_n))) {
+        retval = &_db.timefmt_lary[bsr][index];
+    }
+    return retval;
+}
+
+// --- orgfile.FDb.timefmt.Last
+// Return pointer to last element of array, or NULL if array is empty
+inline orgfile::FTimefmt* orgfile::timefmt_Last() {
+    return timefmt_Find(u64(_db.timefmt_n-1));
+}
+
+// --- orgfile.FDb.timefmt.N
+// Return number of items in the pool
+inline i32 orgfile::timefmt_N() {
+    return _db.timefmt_n;
+}
+
+// --- orgfile.FDb.timefmt.qFind
+// 'quick' Access row by row id. No bounds checking.
+inline orgfile::FTimefmt& orgfile::timefmt_qFind(u64 t) {
+    u64 x = t + 1;
+    u64 bsr   = algo::u64_BitScanReverse(x);
+    u64 base  = u64(1)<<bsr;
+    u64 index = x-base;
+    return _db.timefmt_lary[bsr][index];
+}
+
 // --- orgfile.FDb.filehash_curs.Reset
 // cursor points to valid item
 inline void orgfile::_db_filehash_curs_Reset(_db_filehash_curs &curs, orgfile::FDb &parent) {
@@ -104,6 +147,31 @@ inline void orgfile::_db_filehash_curs_Next(_db_filehash_curs &curs) {
 // item access
 inline orgfile::FFilehash& orgfile::_db_filehash_curs_Access(_db_filehash_curs &curs) {
     return filehash_qFind(u64(curs.index));
+}
+
+// --- orgfile.FDb.timefmt_curs.Reset
+// cursor points to valid item
+inline void orgfile::_db_timefmt_curs_Reset(_db_timefmt_curs &curs, orgfile::FDb &parent) {
+    curs.parent = &parent;
+    curs.index = 0;
+}
+
+// --- orgfile.FDb.timefmt_curs.ValidQ
+// cursor points to valid item
+inline bool orgfile::_db_timefmt_curs_ValidQ(_db_timefmt_curs &curs) {
+    return curs.index < _db.timefmt_n;
+}
+
+// --- orgfile.FDb.timefmt_curs.Next
+// proceed to next item
+inline void orgfile::_db_timefmt_curs_Next(_db_timefmt_curs &curs) {
+    curs.index++;
+}
+
+// --- orgfile.FDb.timefmt_curs.Access
+// item access
+inline orgfile::FTimefmt& orgfile::_db_timefmt_curs_Access(_db_timefmt_curs &curs) {
+    return timefmt_qFind(u64(curs.index));
 }
 inline orgfile::FFilehash::FFilehash() {
     orgfile::FFilehash_Init(*this);
@@ -204,6 +272,16 @@ inline void orgfile::FFilename_Init(orgfile::FFilename& filename) {
     filename.filename_next = (orgfile::FFilename*)-1; // (orgfile.FDb.filename) not-in-tpool's freelist
     filename.ind_filename_next = (orgfile::FFilename*)-1; // (orgfile.FDb.ind_filename) not-in-hash
 }
+inline orgfile::FTimefmt::FTimefmt() {
+    orgfile::FTimefmt_Init(*this);
+}
+
+
+// --- orgfile.FTimefmt..Init
+// Set all fields to initial values.
+inline void orgfile::FTimefmt_Init(orgfile::FTimefmt& timefmt) {
+    timefmt.dirname = bool(false);
+}
 inline orgfile::FieldId::FieldId(i32                            in_value)
     : value(in_value)
 {
@@ -236,6 +314,38 @@ inline orgfile::FieldId::operator orgfile_FieldIdEnum () const {
 inline void orgfile::FieldId_Init(orgfile::FieldId& parent) {
     parent.value = i32(-1);
 }
+inline orgfile::TableId::TableId(i32                            in_value)
+    : value(in_value)
+{
+}
+inline orgfile::TableId::TableId(orgfile_TableIdEnum arg) { this->value = i32(arg); }
+inline orgfile::TableId::TableId() {
+    orgfile::TableId_Init(*this);
+}
+
+
+// --- orgfile.TableId.value.GetEnum
+// Get value of field as enum type
+inline orgfile_TableIdEnum orgfile::value_GetEnum(const orgfile::TableId& parent) {
+    return orgfile_TableIdEnum(parent.value);
+}
+
+// --- orgfile.TableId.value.SetEnum
+// Set value of field from enum type.
+inline void orgfile::value_SetEnum(orgfile::TableId& parent, orgfile_TableIdEnum rhs) {
+    parent.value = i32(rhs);
+}
+
+// --- orgfile.TableId.value.Cast
+inline orgfile::TableId::operator orgfile_TableIdEnum () const {
+    return orgfile_TableIdEnum((*this).value);
+}
+
+// --- orgfile.TableId..Init
+// Set all fields to initial values.
+inline void orgfile::TableId_Init(orgfile::TableId& parent) {
+    parent.value = i32(-1);
+}
 inline orgfile::file::file() {
 }
 
@@ -247,6 +357,11 @@ inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::trace
 
 inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::FieldId &row) {// cfmt:orgfile.FieldId.String
     orgfile::FieldId_Print(const_cast<orgfile::FieldId&>(row), str);
+    return str;
+}
+
+inline algo::cstring &algo::operator <<(algo::cstring &str, const orgfile::TableId &row) {// cfmt:orgfile.TableId.String
+    orgfile::TableId_Print(const_cast<orgfile::TableId&>(row), str);
     return str;
 }
 

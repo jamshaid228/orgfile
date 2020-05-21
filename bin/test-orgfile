@@ -1,0 +1,34 @@
+#!/usr/bin/env perl
+my $tests =
+{
+    # check detection of target path by date that was parsed from filename
+    q!find test/orgfile -name "PSX_*" | bin/orgfile -move -tgtdir:test/orgfile -subdir:%Y/%m/%d! =>
+        q!orgfile.file  pathname:test/orgfile/PSX_20200101.txt  tgtfile:test/orgfile/2020/01/01/PSX_20200101.txt  comment:"move file"!
+        
+        # check -dedup (file c.txt is unique)
+        ,q!find test/orgfile -name "*.txt" | bin/orgfile -dedup! =>
+        q!orgfile.dedup  original:test/orgfile/b.txt  duplicate:test/orgfile/a.txt  comment:"contents are identical (based ond hash)"!
+        
+        # check -dedup_pathregx -- delete a.txt intead of b.txt
+        ,q!(echo test/orgfile/b.txt; find test/orgfile -name "*.txt") | bin/orgfile -dedup -dedup_pathregx "%/a.txt"! =>
+        q!orgfile.dedup  original:test/orgfile/b.txt  duplicate:test/orgfile/a.txt  comment:"contents are identical (based ond hash)"!
+        
+        # should be a no-op
+        ,q!find test/orgfile -name "PSX_*" | bin/orgfile -move -tgtdir:test/orgfile! =>
+        q!!
+
+        # should be a no-op
+        ,q!find test/orgfile -name "PSX_*" | bin/orgfile -move -tgtdir:.! =>
+        q!orgfile.file  pathname:test/orgfile/PSX_20200101.txt  tgtfile:./PSX_20200101.txt  comment:"move file"!
+};
+foreach my $test(keys(%$tests)) {
+    $out=`$test`;
+    chomp($out);
+    $out eq $tests->{$test} or die "
+TEST FAILED
+TEST    : $test
+EXPECTED: $tests->{$test}
+GOT     : $out
+";
+}
+

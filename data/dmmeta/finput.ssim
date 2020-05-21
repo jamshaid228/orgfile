@@ -163,6 +163,7 @@ dmmeta.finput  field:lib_ctype.FDb.ssimfile  extrn:N  update:N  strict:Y  commen
 dmmeta.finput  field:lib_ctype.FDb.substr  extrn:N  update:N  strict:Y  comment:""
 dmmeta.finput  field:mdbg.FDb.builddir  extrn:N  update:N  strict:Y  comment:""
 dmmeta.finput  field:mdbg.FDb.cfg  extrn:N  update:N  strict:Y  comment:""
+dmmeta.finput  field:orgfile.FDb.timefmt  extrn:N  update:N  strict:Y  comment:""
 dmmeta.finput  field:src_func.FDb.badline  extrn:N  update:N  strict:Y  comment:""
 dmmeta.finput  field:src_func.FDb.ctypelen  extrn:N  update:N  strict:Y  comment:""
 dmmeta.finput  field:src_func.FDb.dispatch  extrn:N  update:N  strict:Y  comment:""

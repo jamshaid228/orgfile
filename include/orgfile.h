@@ -38,10 +38,6 @@ namespace orgfile { // update-hdr
     orgfile::FFilename *AccessFilename(strptr fname);
 
     // Determine new filename for FNAME.
-    // If -bydate was specified, the new path is
-    // tgtdir/YYYY-mm-dd/<filename>
-    // Otherwise, it is just
-    // tgtdir/<filename>
     tempstr GetTgtFname(strptr pathname);
 
     // Read filenames from STDIN.

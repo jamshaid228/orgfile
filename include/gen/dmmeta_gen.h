@@ -391,6 +391,7 @@ extern const char *  dmmeta_Ssimfile_ssimfile_dev_targdep;           // dev.targ
 extern const char *  dmmeta_Ssimfile_ssimfile_dev_target;            // dev.target             fconst:dmmeta.Ssimfile.ssimfile/dev.target
 extern const char *  dmmeta_Ssimfile_ssimfile_dev_targsrc;           // dev.targsrc            fconst:dmmeta.Ssimfile.ssimfile/dev.targsrc
 extern const char *  dmmeta_Ssimfile_ssimfile_dev_targsyslib;        // dev.targsyslib         fconst:dmmeta.Ssimfile.ssimfile/dev.targsyslib
+extern const char *  dmmeta_Ssimfile_ssimfile_dev_timefmt;           // dev.timefmt            fconst:dmmeta.Ssimfile.ssimfile/dev.timefmt
 extern const char *  dmmeta_Ssimfile_ssimfile_dev_tool_opt;          // dev.tool_opt           fconst:dmmeta.Ssimfile.ssimfile/dev.tool_opt
 extern const char *  dmmeta_Ssimfile_ssimfile_dev_uname;             // dev.uname              fconst:dmmeta.Ssimfile.ssimfile/dev.uname
 extern const char *  dmmeta_Ssimfile_ssimfile_dmmeta_anonfld;        // dmmeta.anonfld         fconst:dmmeta.Ssimfile.ssimfile/dmmeta.anonfld

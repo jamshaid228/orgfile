@@ -22,40 +22,21 @@
 
 // -----------------------------------------------------------------------------
 
-static bool TimeStruct_Read(TimeStruct &ts, strptr str, strptr fmt) {
-    StringIter iter(str);
-    return algo::TimeStruct_Read(ts,iter,fmt);
-}
-
-// -----------------------------------------------------------------------------
-
-static bool ReadParentDirTimestamp(strptr path, TimeStruct &ts) {
+static bool TimeStruct_Match(TimeStruct &ts, strptr str, bool dirname) {
     bool ret=false;
-    tempstr parentdir(Pathcomp(path,"/RL/RR"));
-    if (TimeStruct_Read(ts, parentdir, "%Y_%m_%d")) {// another one
-        ret=true;
-    } else if (TimeStruct_Read(ts, parentdir, "%Y-%m-%d")) {// another one
-        ret=true;
-    }
+    ind_beg(orgfile::_db_timefmt_curs,timefmt,orgfile::_db) {
+        StringIter iter(str);
+        if (dirname == timefmt.dirname && algo::TimeStruct_Read(ts, iter, timefmt.timefmt)) {
+            ret=true;
+            break;
+        }
+    }ind_end;
     return ret;
 }
 
 // -----------------------------------------------------------------------------
 
-static bool ReadFilenameTimestamp(strptr path, TimeStruct &ts) {
-    bool ret=false;
-    tempstr name(algo::StripDirName(path));
-    if (TimeStruct_Read(ts, name, "PSX_%Y%m%d_")) {// photoshop express format
-        ret=true;
-    } else if (TimeStruct_Read(ts, name, "signal-%Y-%m-%d-")) {// signal app format
-        ret=true;
-    } 
-    return ret;
-}
-
-// -----------------------------------------------------------------------------
-
-// Attempt to determine a photograph's year-month-date from
+// Attempt to determine a file's year-month-date from
 // its pathname.
 // Photos are often stored in directories that look like
 //   x/2008_02_03/IMG12343.CRW
@@ -68,24 +49,14 @@ static bool ReadFilenameTimestamp(strptr path, TimeStruct &ts) {
 // If this heuristic doesn't work, use files's modification time.
 // (important -- not the creation timestamp; file may have been moved; this
 //   changes creation timestamp but keeps the modification timestamp)
-static bool GetYMD(strptr path, cstring &year, cstring &month, cstring &day) {
-    bool ret=false;
-    TimeStruct ts;
-    if (ReadParentDirTimestamp(path, ts)) {
-        ret=true;
-    } else if (ReadFilenameTimestamp(path, ts)) {
-        ret=true;
-    }
+static bool GetTimestamp(strptr path, TimeStruct &ts) {
+    bool ret = TimeStruct_Match(ts, Pathcomp(path,"/RL/RR"),true)
+        || TimeStruct_Match(ts, algo::StripDirName(path),false);
     if (!ret) {// go by the modification date (creation date is unreliable)
         struct stat st;
         ret=stat(Zeroterm(tempstr(path)),&st)==0;
         UnixTime mtime(st.st_mtime);
         ts=algo::GetLocalTimeStruct(mtime);
-    }
-    if (ret) {
-        TimeStruct_Print(ts, year, "%Y");
-        TimeStruct_Print(ts, month, "%m");
-        TimeStruct_Print(ts, day, "%d");
     }
     return ret;
 }
@@ -115,33 +86,14 @@ orgfile::FFilename *orgfile::AccessFilename(strptr fname) {
 
 // -----------------------------------------------------------------------------
 
-// Use shell to tilde-expand a filename
-// ~user/dir -> /home/user/dir
-static tempstr TildeExpand(strptr str) {
-    tempstr ret;
-    if (str.n_elems>0 && str.elems[0]=='~') {
-        ret << Trimmed(SysEval(tempstr()<<"echo "<<str,FailokQ(true),1024*4));
-    } else {
-        ret << str;
-    }
-    return ret;
-}
-
-// -----------------------------------------------------------------------------
-
 // Determine new filename for FNAME.
-// If -bydate was specified, the new path is
-//   tgtdir/YYYY-mm-dd/<filename>
-// Otherwise, it is just
-//   tgtdir/<filename>
 tempstr orgfile::GetTgtFname(strptr pathname) {
-    tempstr tgtdir(_db.cmdline.tgtdir);
-    if (_db.cmdline.bydate) {// organizing by date?
-        tempstr year,month,day;
-        if (GetYMD(pathname,year,month,day)) {
-            tgtdir = DirFileJoin(tgtdir, year)<<"/"<<year<<"-"<<month<<"-"<<day;
-        }
+    tempstr subdir;
+    TimeStruct ts;
+    if (GetTimestamp(pathname,ts)) {
+        TimeStruct_Print(ts, subdir, _db.cmdline.subdir);
     }
+    tempstr tgtdir = DirFileJoin(_db.cmdline.tgtdir,subdir);
     tempstr filename(StripDirName(pathname));
     return DirFileJoin(tgtdir,filename);
 }
@@ -291,8 +243,10 @@ void orgfile::Undo() {
 // -----------------------------------------------------------------------------
 
 void orgfile::Main() {
-    _db.cmdline.tgtdir = TildeExpand(_db.cmdline.tgtdir);
-    vrfy(DirectoryQ(_db.cmdline.tgtdir),
+    if (_db.cmdline.bydate) {
+        _db.cmdline.subdir = "%Y/%Y-%m-%d";
+    }
+    vrfy(!_db.cmdline.move || DirectoryQ(_db.cmdline.tgtdir),
          tempstr()<<"orgfile.baddir"
          <<Keyval("tgtdir",_db.cmdline.tgtdir)
          <<Keyval("comment", "directory doesn't seem to exist"));

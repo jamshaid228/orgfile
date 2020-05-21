@@ -1,0 +1,4 @@
+dev.timefmt  timefmt:PSX_%Y%m%d  dirname:N  comment:"photoshop express format"
+dev.timefmt  timefmt:signal-%Y-%m-%d-  dirname:N  comment:"signal app format"
+dev.timefmt  timefmt:%Y_%m_%d  dirname:Y  comment:"directory time format"
+dev.timefmt  timefmt:%Y-%m-%d  dirname:Y  comment:"directory time format"

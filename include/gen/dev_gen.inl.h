@@ -238,6 +238,16 @@ inline dev::Targsrc::Targsrc() {
 inline dev::Targsyslib::Targsyslib() {
 }
 
+inline dev::Timefmt::Timefmt() {
+    dev::Timefmt_Init(*this);
+}
+
+
+// --- dev.Timefmt..Init
+// Set all fields to initial values.
+inline void dev::Timefmt_Init(dev::Timefmt& parent) {
+    parent.dirname = bool(false);
+}
 inline dev::ToolOpt::ToolOpt(const algo::strptr&            in_tool_opt
         ,const algo::strptr&            in_opt_type
         ,const algo::strptr&            in_opt
@@ -343,6 +353,11 @@ inline algo::cstring &algo::operator <<(algo::cstring &str, const dev::Targsrc &
 
 inline algo::cstring &algo::operator <<(algo::cstring &str, const dev::Targsyslib &row) {// cfmt:dev.Targsyslib.String
     dev::Targsyslib_Print(const_cast<dev::Targsyslib&>(row), str);
+    return str;
+}
+
+inline algo::cstring &algo::operator <<(algo::cstring &str, const dev::Timefmt &row) {// cfmt:dev.Timefmt.String
+    dev::Timefmt_Print(const_cast<dev::Timefmt&>(row), str);
     return str;
 }
 
